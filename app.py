@@ -40,7 +40,7 @@ if logo is None:
     st.stop()
 
 # === Resize đúng chiều cao yêu cầu ===
-desired_height = 12  # pixel, ví dụ: 28 px (bằng chữ hotline, nhỏ gọn)
+desired_height = 28  # pixel, ví dụ: 28 px (bằng chữ hotline, nhỏ gọn)
 w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
