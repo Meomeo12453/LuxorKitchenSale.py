@@ -10,52 +10,22 @@ from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
 
-# ===== PAGE CONFIG & CSS =====
+# ===== Cấu hình giao diện =====
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
-
-# Tăng kích thước mũi tên sidebar, thêm chữ "Tùy chọn"
 st.markdown("""
-<style>
-[data-testid="collapsedControl"] svg {
-    width: 38px !important;
-    height: 38px !important;
-}
-[data-testid="collapsedControl"] {
-    margin-left: 20px !important;
-    margin-top: 32px !important;
-}
-[data-testid="collapsedControl"]::after {
-    content: " Tùy chọn";
-    font-size: 1.2rem;
-    color: #6a6a6a;
-    margin-left: 8px;
-    font-weight: 600;
-    vertical-align: middle;
-}
-.stApp {background: #F7F8FA;}
-img { border-radius: 0 !important; }
-#tuychon {
-    position: absolute;
-    left: 32px;
-    top: 18px;
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: #444;
-    z-index: 100;
-}
-</style>
-""", unsafe_allow_html=True)
+    <style>
+    .block-container {padding-top:1.2rem;}
+    .stApp {background: #F7F8FA;}
+    img { border-radius: 0 !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
-# Hiển thị tùy chọn phân tích (góc trái trên cùng)
-st.markdown('<div id="tuychon">🔎 Tùy chọn phân tích</div>', unsafe_allow_html=True)
-
-# ==== Logo (căn giữa, resize đúng tỉ lệ, không bị cắt) ====
+# ==== Hiển thị logo căn giữa ====
 LOGO_PATHS = [
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png",
-    "30313609-d84b-45c1-958e-7d50bf11b60c.png",
-    "164153a0-0c51-43bb-8a81-9600118a0045.png",
-    "002f43d6-a413-41d0-b88a-cde6a1a1a98c.png",
+    "30313609-d84b-45c1-958e-7d50bf11b60c.png",  # Thử thêm nếu bạn up file mới
+    "002f43d6-a413-41d0-b88a-cde6a1a1a98c.png"
 ]
 logo = None
 for path in LOGO_PATHS:
@@ -63,19 +33,18 @@ for path in LOGO_PATHS:
         logo = Image.open(path)
         break
 
-if logo:
-    # Resize logo để chiều cao tầm 40px (hợp lý cho cả mobile)
-    desired_height = 40
+if logo is not None:
+    desired_height = 36  # pixel
     w, h = logo.size
     new_width = int((w / h) * desired_height)
     logo_resized = logo.resize((new_width, desired_height))
-    st.markdown("<div style='width:100%;text-align:center;margin-top:16px;margin-bottom:10px;'>", unsafe_allow_html=True)
+    st.markdown("<div style='display:flex;justify-content:center;margin-bottom:12px;'>", unsafe_allow_html=True)
     st.image(logo_resized)
     st.markdown("</div>", unsafe_allow_html=True)
 else:
-    st.warning("Không tìm thấy file logo.")
+    st.warning("Không tìm thấy file logo. Đảm bảo file logo đã upload đúng thư mục app!")
 
-# ===== HOTLINE & ĐỊA CHỈ (căn giữa) =====
+# ===== HOTLINE & ĐỊA CHỈ =====
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
     unsafe_allow_html=True)
@@ -84,23 +53,22 @@ st.markdown(
     unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ===== BẮT ĐẦU DASHBOARD =====
+# ===== TIÊU ĐỀ =====
 st.title("Sales Dashboard MiniApp")
 st.markdown(
     "<small style='color:gray;'>Dashboard phân tích & quản trị đại lý cho DABA Sài Gòn. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.</small>",
     unsafe_allow_html=True)
 
-# ===== SIDEBAR CHỨC NĂNG =====
-with st.sidebar:
-    st.header("Tùy chọn phân tích")
-    chart_type = st.radio("Chọn biểu đồ:", ["Cột chồng", "Sunburst", "Pareto", "Pie"], horizontal=False)
-    filter_nganh = st.multiselect("Lọc theo nhóm khách hàng:", options=['Catalyst', 'Visionary', 'Trailblazer'], default=[])
-    st.divider()
-    st.info("Upload lại file mới hoặc bấm F5 để làm lại.")
-    st.caption("© 2024 DABA Sài Gòn – Hotline: 0909.625.808")
+# ======= CÁC CONTROL PHÂN TÍCH TRÊN MAIN PAGE =======
+st.markdown("## 🔎 Tùy chọn phân tích")
+col1, col2 = st.columns(2)
+with col1:
+    chart_type = st.radio("Chọn biểu đồ:", ["Cột chồng", "Sunburst", "Pareto", "Pie"], horizontal=True)
+with col2:
+    filter_nganh = st.multiselect("Lọc theo nhóm khách hàng:", ["Catalyst", "Visionary", "Trailblazer"], default=[])
 
-# ===== UPLOAD FILE =====
-uploaded_file = st.file_uploader("### 1. Tải lên file Excel (.xlsx)", type="xlsx", help="Chỉ nhận Excel, <200MB.")
+st.markdown("### 1. Tải lên file Excel (.xlsx)")
+uploaded_file = st.file_uploader("", type="xlsx", help="Chỉ nhận Excel, <200MB.")
 if not uploaded_file:
     st.info("💡 Hãy upload file Excel mẫu để bắt đầu sử dụng Dashboard.")
     with st.expander("📋 Xem hướng dẫn & file mẫu", expanded=False):
@@ -111,19 +79,8 @@ if not uploaded_file:
         )
     st.stop()
 
-# ===== XỬ LÝ DỮ LIỆU & CHECK CỘT =====
-required_columns = ['Mã khách hàng', 'Tên khách hàng', 'Nhóm khách hàng', 'Tổng bán trừ trả hàng']
-try:
-    df = pd.read_excel(uploaded_file)
-    df.columns = [c.strip() for c in df.columns]  # loại bỏ dấu cách thừa
-    missing = [c for c in required_columns if c not in df.columns]
-    if missing:
-        st.error(f"❌ Thiếu các cột bắt buộc: {', '.join(missing)}. Vui lòng kiểm tra lại file Excel!")
-        st.stop()
-except Exception as e:
-    st.error(f"Lỗi khi đọc file: {e}")
-    st.stop()
-
+# ===== XỬ LÝ DỮ LIỆU =====
+df = pd.read_excel(uploaded_file)
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
 
 # "Cấp dưới"
