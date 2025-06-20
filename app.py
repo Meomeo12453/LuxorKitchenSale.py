@@ -57,7 +57,7 @@ st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)  # Tạo
 
 # ======= Hiển thị logo căn giữa với margin trên và dưới ======
 st.markdown(f"""
-<div style="width:100%;display:flex;justify-content:center;margin-top:0px;margin-bottom:20px;">
+<div style="width:100%;display:flex;justify-content:center;margin-top:0px;margin-bottom:30px;">
     <img src="data:image/png;base64,{logo_base64}" alt="logo" style="display:block;height:{desired_height}px;">
 </div>
 """, unsafe_allow_html=True)
