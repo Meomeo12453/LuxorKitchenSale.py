@@ -14,17 +14,14 @@ from openpyxl.styles import PatternFill, Alignment, Font
 # ===== Cấu hình giao diện =====
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 st.markdown("""
-<div style='display:flex;justify-content:center;margin-bottom:20px;'>
-""", unsafe_allow_html=True)
-st.image(logo_resized)
-st.markdown("</div>", unsafe_allow_html=True)
+    <style>
+    .block-container {padding-top:1.2rem;}
+    .stApp {background: #F7F8FA;}
+    img { border-radius: 0 !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
-
-
-import streamlit as st
-from PIL import Image
-import os
-
+# ==== Load logo, resize trước khi hiển thị ====
 LOGO_PATHS = [
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
@@ -45,14 +42,12 @@ w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
 
-# Chỉ sau đây mới gọi được st.image
+# ==== Hiển thị logo duy nhất, căn giữa, margin-bottom 20px ====
 st.markdown("""
 <div style='display:flex;justify-content:center;margin-bottom:20px;'>
 """, unsafe_allow_html=True)
 st.image(logo_resized)
 st.markdown("</div>", unsafe_allow_html=True)
-
-
 
 # ===== HOTLINE & ĐỊA CHỈ =====
 st.markdown(
