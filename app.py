@@ -23,7 +23,7 @@ from PIL import Image
 import os
 import streamlit as st
 
-# -- Chặn Streamlit CSS auto bo góc ảnh --
+# -- CSS chặn bo góc ảnh --
 st.markdown("""
     <style>
     img { border-radius: 0 !important; }
@@ -32,7 +32,7 @@ st.markdown("""
 
 LOGO_PATHS = [
     "logo-daba.png",
-    "8889f7bb-0b3a-492b-bdc7-31f1de08bc28.png"
+    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
 ]
 
 logo = None
@@ -45,14 +45,16 @@ if logo is None:
     st.warning("Không tìm thấy file logo. Đảm bảo file logo-daba.png đã upload đúng thư mục app!")
     st.stop()
 
-desired_height = 38  # pixel
+desired_height = 28  # pixel
 w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
 
+# ===== Chỉ duy nhất 1 lần hiển thị logo, căn giữa, không warning =====
 st.markdown("<div style='display:flex;justify-content:center;'>", unsafe_allow_html=True)
-st.image(logo_resized, use_column_width=False)
+st.image(logo_resized)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # === Căn giữa và hiển thị ===
