@@ -19,19 +19,37 @@ st.markdown("""
 st.image(logo_resized)
 st.markdown("</div>", unsafe_allow_html=True)
 
+import streamlit as st
+from PIL import Image
+import os
+
+LOGO_PATHS = [
+    "logo-daba.png",
+    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
+]
+
 logo = None
 for path in LOGO_PATHS:
     if os.path.exists(path):
         logo = Image.open(path)
         break
+
 if logo is None:
     st.warning("Không tìm thấy file logo. Đảm bảo file logo-daba.png đã upload đúng thư mục app!")
     st.stop()
 
-desired_height = 28  # pixel (chỉnh nhỏ/lớn tại đây)
+desired_height = 28  # hoặc chỉnh nhỏ hơn tuỳ ý
 w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
+
+# Chỉ sau đây mới gọi được st.image
+st.markdown("""
+<div style='display:flex;justify-content:center;margin-bottom:20px;'>
+""", unsafe_allow_html=True)
+st.image(logo_resized)
+st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ===== HOTLINE & ĐỊA CHỈ =====
