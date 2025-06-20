@@ -20,18 +20,32 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 from PIL import Image
+import os
 import math
 
-# ===== LOGO căn giữa, rất nhỏ (12px ~ 0.3cm) =====
-import math
+LOGO_PATHS = [
+    "logo-daba.png",
+    "8889f7bb-0b3a-492b-bdc7-31f1de08bc28.png"
+]
 
-target_height = 28  # 28px, nhỏ gọn vừa dòng chữ hotline
+logo = None
+for path in LOGO_PATHS:
+    if os.path.exists(path):
+        logo = Image.open(path)
+        break
+
+if logo is None:
+    st.warning("Không tìm thấy file logo. Đảm bảo file logo-daba.png đã upload đúng thư mục app!")
+    st.stop()
+
+target_height = 28  # hoặc 22, 18 px... tùy mong muốn nhỏ
 w, h = logo.size
 target_width = math.ceil((w / h) * target_height)
 
 st.markdown("<div style='display:flex;justify-content:center;'>", unsafe_allow_html=True)
 st.image(logo, width=target_width, use_column_width=False)
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ===== HOTLINE & ĐỊA CHỈ =====
