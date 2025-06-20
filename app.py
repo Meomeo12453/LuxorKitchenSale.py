@@ -8,76 +8,87 @@ from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
 
-# ===== HEADER VÀ CẤU HÌNH =====
-st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
-st.markdown("""
-    <style>
-    .block-container {padding-top:2rem;}
-    .stApp {background: #F7F8FA;}
-    </style>
-    """, unsafe_allow_html=True)
-
-st.image("https://i.imgur.com/4rSNwJK.png", width=75)
-st.title("Sales Dashboard MiniApp")
+# ==== Cấu hình layout & style ====
+st.set_page_config(page_title=Sales Dashboard MiniApp, layout=wide)
 st.markdown(
-    "<small style='color:gray;'>DABA Sài Gòn – Dashboard phân tích & quản trị đại lý. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.</small>",
+    style
+    .block-container {padding-top1.2rem;}
+    .stApp {background #F7F8FA;}
+    .daba-logo {displayflex;justify-contentcenter;margin-bottom10px;}
+    .daba-hotline {text-aligncenter;font-size16px;color#1570af;font-weight600;}
+    .daba-address {text-aligncenter;font-size14px;color#555;}
+    style
+    , unsafe_allow_html=True)
+
+# ==== LOGO & HEADER ====
+st.markdown(
+    div class='daba-logo'
+    img src='logo-daba.png' width='210' style='border-radius24px;box-shadow0 0 12px #eee;'
+    div,
+    unsafe_allow_html=True
+)
+st.markdown(div class='daba-hotline'Hotline 0909.625.808div, unsafe_allow_html=True)
+st.markdown(div class='daba-address'Địa chỉ Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCMdiv, unsafe_allow_html=True)
+st.markdown(br, unsafe_allow_html=True)
+
+st.title(Sales Dashboard MiniApp)
+st.markdown(
+    small style='colorgray;'Dashboard phân tích & quản trị đại lý cho DABA Sài Gòn. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.small,
     unsafe_allow_html=True
 )
 
-# ===== SIDEBAR =====
-with st.sidebar:
-    st.header("🔎 Tùy chọn hiển thị & phân tích")
-    chart_type = st.radio("Chọn biểu đồ:", ["Cột chồng", "Sunburst", "Pareto", "Pie"], horizontal=False)
-    filter_nganh = st.multiselect("Lọc theo nhóm khách hàng:", options=['Catalyst', 'Visionary', 'Trailblazer'], default=[])
+# ==== SIDEBAR ====
+with st.sidebar
+    st.header(🔎 Tuỳ chọn phân tích)
+    chart_type = st.radio(Chọn biểu đồ, [Cột chồng, Sunburst, Pareto, Pie], horizontal=False)
+    filter_nganh = st.multiselect(Lọc theo nhóm khách hàng, options=['Catalyst', 'Visionary', 'Trailblazer'], default=[])
     st.divider()
-    st.info("Bạn có thể upload lại file mới hoặc làm lại bất cứ lúc nào.")
-    st.caption("© 2024 DABA Sài Gòn. Hỗ trợ: 0909.625.808")
+    st.info(Upload lại file mới hoặc bấm F5 để làm lại.)
+    st.caption(© 2024 DABA Sài Gòn – Hotline 0909.625.808)
 
-# ===== UPLOAD FILE =====
-uploaded_file = st.file_uploader("### 1. Tải lên file Excel (.xlsx)", type="xlsx", help="Chỉ nhận Excel, <200MB.")
-
-if not uploaded_file:
-    st.info("Hãy upload file Excel mẫu để bắt đầu sử dụng Dashboard.")
-    st.markdown("---")
-    with st.expander("📋 Xem hướng dẫn & file mẫu", expanded=False):
+# ==== UPLOAD FILE ====
+uploaded_file = st.file_uploader(### 1. Tải lên file Excel (.xlsx), type=xlsx, help=Chỉ nhận Excel, 200MB.)
+if not uploaded_file
+    st.info(💡 Hãy upload file Excel mẫu để bắt đầu sử dụng Dashboard.)
+    with st.expander(📋 Xem hướng dẫn & file mẫu, expanded=False)
         st.markdown(
-            "- Nhấn **Browse files** hoặc kéo thả file.\n"
-            "- File cần có các cột: **Mã khách hàng, Tên khách hàng, Nhóm khách hàng, Tổng bán trừ trả hàng**.\n"
-            "- Xem file mẫu: [Download Excel mẫu](https://github.com/streamlit/example-data/raw/main/agency_sample.xlsx)"
+            - Nhấn Browse files hoặc kéo thả file.n
+            - File cần các cột Mã khách hàng, Tên khách hàng, Nhóm khách hàng, Tổng bán trừ trả hàng.n
+            - Nếu lỗi, kiểm tra lại tiêu đề cột trong file Excel.
         )
     st.stop()
 
-# ===== XỬ LÝ DỮ LIỆU =====
+# ==== XỬ LÝ DỮ LIỆU ====
 df = pd.read_excel(uploaded_file)
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
 
-# "Cấp dưới"
+# Cấp dưới
 cap_duoi_list = []
-for idx, row in df.iterrows():
+for idx, row in df.iterrows()
     ma_kh = row['Mã khách hàng']
-    ten_cap_tren, max_len = "", 0
-    for idx2, row2 in df.iterrows():
-        if idx == idx2: continue
+    ten_cap_tren, max_len = , 0
+    for idx2, row2 in df.iterrows()
+        if idx == idx2 continue
         ma_cap_tren = row2['Mã khách hàng']
-        if ma_cap_tren != ma_kh and ma_cap_tren in ma_kh:
-            if len(ma_cap_tren) > max_len:
+        if ma_cap_tren != ma_kh and ma_cap_tren in ma_kh
+            if len(ma_cap_tren)  max_len
                 ten_cap_tren = row2['Tên khách hàng']
                 max_len = len(ma_cap_tren)
-    cap_duoi_list.append(f"Cấp dưới {ten_cap_tren}" if ten_cap_tren else "")
+    cap_duoi_list.append(fCấp dưới {ten_cap_tren} if ten_cap_tren else )
 df['Cấp dưới'] = cap_duoi_list
 
-# "Số thuộc cấp"
+# Số thuộc cấp
 so_thuoc_cap = []
-for idx, row in df.iterrows():
+for idx, row in df.iterrows()
     ma_kh = row['Mã khách hàng']
     count = sum((other_ma != ma_kh and other_ma.startswith(ma_kh)) for other_ma in df['Mã khách hàng'])
     so_thuoc_cap.append(count)
 df['Số thuộc cấp'] = so_thuoc_cap
 
-# "Doanh số hệ thống"
-def tinh_doanh_so_he_thong(df_in):
+# Doanh số hệ thống
+def tinh_doanh_so_he_thong(df_in)
     dsht = []
-    for idx, row in df_in.iterrows():
+    for idx, row in df_in.iterrows()
         ma_kh = row['Mã khách hàng']
         mask = (df_in['Mã khách hàng'] != ma_kh) & (df_in['Mã khách hàng'].str.startswith(ma_kh))
         subtotal = df_in.loc[mask, 'Tổng bán trừ trả hàng'].sum()
@@ -87,35 +98,35 @@ df['Doanh số hệ thống'] = tinh_doanh_so_he_thong(df)
 
 # Hoa hồng
 network = {
-    'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
-    'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
-    'Trailblazer':  {'comm_rate': 0.40, 'override_rate': 0.05},
+    'Catalyst'     {'comm_rate' 0.35, 'override_rate' 0.00},
+    'Visionary'    {'comm_rate' 0.40, 'override_rate' 0.05},
+    'Trailblazer'  {'comm_rate' 0.40, 'override_rate' 0.05},
 }
-df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('comm_rate', 0))
-df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
-df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
+df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r network.get(r, {}).get('comm_rate', 0))
+df['override_rate'] = df['Nhóm khách hàng'].map(lambda r network.get(r, {}).get('override_rate', 0))
+df['override_comm'] = df['Doanh số hệ thống']  df['override_rate']
 
-# Filter nếu chọn nhóm
-if filter_nganh:
+# Filter theo nhóm
+if filter_nganh
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
 
-# ===== BẢNG DỮ LIỆU & CHÚ GIẢI =====
-with st.expander("📋 Giải thích & các trường dữ liệu", expanded=False):
-    st.markdown("""
-    **Các trường dữ liệu chính:**  
-    - `Cấp dưới`: Tên khách hàng cấp trên trực tiếp.
-    - `Số thuộc cấp`: Số lượng khách hàng thuộc hệ thống nhánh này.
-    - `Doanh số hệ thống`: Tổng doanh số của tất cả cấp dưới thuộc nhánh.
-    - `override_comm`: Tiền hoa hồng từ hệ thống cấp dưới (áp dụng tỷ lệ theo nhóm khách hàng).
-    """)
+# ==== HIỂN THỊ BẢNG DỮ LIỆU & GIẢI THÍCH ====
+with st.expander(📋 Giải thích các trường dữ liệu, expanded=False)
+    st.markdown(
+    Các trường dữ liệu chính  
+    - `Cấp dưới` Khách hàng thuộc hệ thống trực tiếp dưới khách hàng này.
+    - `Số thuộc cấp` Tổng số thành viên trong nhánh hệ thống.
+    - `Doanh số hệ thống` Tổng doanh số của tất cả cấp dưới thuộc nhánh này.
+    - `override_comm` Hoa hồng từ hệ thống cấp dưới (áp dụng tỷ lệ từng nhóm).
+    )
 
-st.subheader("2. Bảng dữ liệu đại lý đã xử lý")
+st.subheader(2. Bảng dữ liệu đại lý đã xử lý)
 st.dataframe(df, use_container_width=True, hide_index=True)
 
-# ===== BIỂU ĐỒ PHÂN TÍCH =====
-st.subheader("3. Phân tích biểu đồ dữ liệu")
+# ==== BIỂU ĐỒ PHÂN TÍCH ====
+st.subheader(3. Biểu đồ phân tích dữ liệu)
 
-if chart_type == "Cột chồng":
+if chart_type == Cột chồng
     fig, ax = plt.subplots(figsize=(12,5))
     ind = np.arange(len(df))
     ax.bar(ind, df['Tổng bán trừ trả hàng'], width=0.5, label='Tổng bán cá nhân')
@@ -127,40 +138,50 @@ if chart_type == "Cột chồng":
     ax.legend()
     st.pyplot(fig)
 
-elif chart_type == "Sunburst":
-    fig2 = px.sunburst(
-        df,
-        path=['Nhóm khách hàng', 'Tên khách hàng'],
-        values='Tổng bán trừ trả hàng',
-        title="Sơ đồ hệ thống cấp bậc & doanh số"
-    )
-    st.plotly_chart(fig2, use_container_width=True)
+elif chart_type == Sunburst
+    # Sửa lỗi Sunburst plotly trên cloud không tự show, phải trả về fig object cho st.plotly_chart
+    try
+        fig2 = px.sunburst(
+            df,
+            path=['Nhóm khách hàng', 'Tên khách hàng'],
+            values='Tổng bán trừ trả hàng',
+            title=Sơ đồ hệ thống cấp bậc & doanh số
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+    except Exception as e
+        st.error(fLỗi khi vẽ Sunburst chart {e})
 
-elif chart_type == "Pareto":
-    df_sorted = df.sort_values('Tổng bán trừ trả hàng', ascending=False)
-    cum_sum = df_sorted['Tổng bán trừ trả hàng'].cumsum()
-    cum_perc = 100 * cum_sum / df_sorted['Tổng bán trừ trả hàng'].sum()
-    fig3, ax1 = plt.subplots(figsize=(10,5))
-    ax1.bar(np.arange(len(df_sorted)), df_sorted['Tổng bán trừ trả hàng'], label="Doanh số")
-    ax1.set_ylabel('Doanh số')
-    ax1.set_xticks(range(len(df_sorted)))
-    ax1.set_xticklabels(df_sorted['Tên khách hàng'], rotation=60, ha='right')
-    ax2 = ax1.twinx()
-    ax2.plot(np.arange(len(df_sorted)), cum_perc, color='red', marker='o', label='Tích lũy (%)')
-    ax2.set_ylabel('Tỷ lệ tích lũy (%)')
-    ax1.set_title('Biểu đồ Pareto: Doanh số & tỷ trọng tích lũy')
-    fig3.tight_layout()
-    st.pyplot(fig3)
+elif chart_type == Pareto
+    try
+        df_sorted = df.sort_values('Tổng bán trừ trả hàng', ascending=False)
+        cum_sum = df_sorted['Tổng bán trừ trả hàng'].cumsum()
+        cum_perc = 100  cum_sum  df_sorted['Tổng bán trừ trả hàng'].sum()
+        fig3, ax1 = plt.subplots(figsize=(10,5))
+        ax1.bar(np.arange(len(df_sorted)), df_sorted['Tổng bán trừ trả hàng'], label=Doanh số)
+        ax1.set_ylabel('Doanh số')
+        ax1.set_xticks(range(len(df_sorted)))
+        ax1.set_xticklabels(df_sorted['Tên khách hàng'], rotation=60, ha='right')
+        ax2 = ax1.twinx()
+        ax2.plot(np.arange(len(df_sorted)), cum_perc, color='red', marker='o', label='Tích lũy (%)')
+        ax2.set_ylabel('Tỷ lệ tích lũy (%)')
+        ax1.set_title('Biểu đồ Pareto Doanh số & tỷ trọng tích lũy')
+        fig3.tight_layout()
+        st.pyplot(fig3)
+    except Exception as e
+        st.error(fLỗi khi vẽ Pareto chart {e})
 
-elif chart_type == "Pie":
-    fig4, ax4 = plt.subplots(figsize=(6,6))
-    s = df.groupby('Nhóm khách hàng')['Tổng bán trừ trả hàng'].sum()
-    ax4.pie(s, labels=s.index, autopct='%1.1f%%')
-    ax4.set_title('Tỷ trọng doanh số theo nhóm khách hàng')
-    st.pyplot(fig4)
+elif chart_type == Pie
+    try
+        fig4, ax4 = plt.subplots(figsize=(6,6))
+        s = df.groupby('Nhóm khách hàng')['Tổng bán trừ trả hàng'].sum()
+        ax4.pie(s, labels=s.index, autopct='%1.1f%%')
+        ax4.set_title('Tỷ trọng doanh số theo nhóm khách hàng')
+        st.pyplot(fig4)
+    except Exception as e
+        st.error(fLỗi khi vẽ Pie chart {e})
 
-# ===== XUẤT FILE KẾT QUẢ ĐẸP =====
-st.subheader("4. Tải file kết quả định dạng chuyên nghiệp")
+# ==== XUẤT FILE ĐẸP, TẢI VỀ ====
+st.subheader(4. Tải file kết quả định dạng màu nhóm)
 
 output_file = 'sales_report_dep.xlsx'
 df.to_excel(output_file, index=False)
@@ -171,7 +192,7 @@ ws = wb.active
 header_fill = PatternFill(start_color='FFE699', end_color='FFE699', fill_type='solid')
 header_font = Font(bold=True, color='000000')
 header_align = Alignment(horizontal='center', vertical='center')
-for col in range(1, ws.max_column + 1):
+for col in range(1, ws.max_column + 1)
     cell = ws.cell(row=1, column=col)
     cell.fill = header_fill
     cell.font = header_font
@@ -184,75 +205,77 @@ cols_money = [col[0].column for col in ws.iter_cols(1, ws.max_column)
 col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
 col_role = [cell.value for cell in ws[1]].index('Nhóm khách hàng')+1
 
-# Gom nhóm mã KH: tìm prefix dài nhất có nhiều dòng nhất
 all_codes = [str(ws.cell(row=i, column=col_makh).value) for i in range(2, ws.max_row+1)]
 prefix_groups = {}
-for length in range(len(max(all_codes, key=len)), 0, -1):
+for length in range(len(max(all_codes, key=len)), 0, -1)
     prefix_count = {}
-    for code in all_codes:
-        if len(code) < length:
+    for code in all_codes
+        if len(code)  length
             continue
-        prefix = code[:length]
+        prefix = code[length]
         prefix_count.setdefault(prefix, []).append(code)
-    for prefix, codes in prefix_count.items():
-        if len(codes) > 1:
+    for prefix, codes in prefix_count.items()
+        if len(codes)  1
             prefix_groups[prefix] = codes
 
 row_to_prefix = {}
-for idx, code in enumerate(all_codes):
+for idx, code in enumerate(all_codes)
     best_prefix = ''
     best_len = 0
-    for prefix in prefix_groups.keys():
-        if code.startswith(prefix) and len(prefix) > best_len:
+    for prefix in prefix_groups.keys()
+        if code.startswith(prefix) and len(prefix)  best_len
             best_prefix = prefix
             best_len = len(prefix)
     row_to_prefix[idx+2] = best_prefix if best_prefix else code
 
 prefix_set = set(row_to_prefix.values())
 prefix_list = sorted(prefix_set)
-def get_contrasting_color(idx, total):
-    h = idx / total
+def get_contrasting_color(idx, total)
+    h = idx  total
     r, g, b = colorsys.hsv_to_rgb(h, 0.65, 1)
-    return "%02X%02X%02X" % (int(r*255), int(g*255), int(b*255))
-prefix_to_color = {prefix: PatternFill(start_color=get_contrasting_color(i, len(prefix_list)),
+    return %02X%02X%02X % (int(r255), int(g255), int(b255))
+prefix_to_color = {prefix PatternFill(start_color=get_contrasting_color(i, len(prefix_list)),
                                        end_color=get_contrasting_color(i, len(prefix_list)),
                                        fill_type='solid')
                    for i, prefix in enumerate(prefix_list)}
 
-for row in range(2, ws.max_row + 1):
+for row in range(2, ws.max_row + 1)
     role = ws.cell(row=row, column=col_role).value
-    if role == 'Trailblazer':
+    if role == 'Trailblazer'
         fill = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
-    else:
+    else
         fill = prefix_to_color[row_to_prefix[row]]
-    for col in range(1, ws.max_column + 1):
+    for col in range(1, ws.max_column + 1)
         ws.cell(row=row, column=col).fill = fill
 
-for col in range(1, ws.max_column + 1):
-    for row in range(2, ws.max_row+1):
+for col in range(1, ws.max_column + 1)
+    for row in range(2, ws.max_row+1)
         cell = ws.cell(row=row, column=col)
-        if col in cols_money:
-            if isinstance(cell.value, (int, float)):
+        if col in cols_money
+            if isinstance(cell.value, (int, float))
                 cell.number_format = '#,##0'
             cell.alignment = Alignment(horizontal='right', vertical='center')
-        else:
+        else
             cell.alignment = Alignment(horizontal='center', vertical='center')
 
-for col in ws.columns:
+for col in ws.columns
     max_length = 0
     column = col[0].column_letter
-    for cell in col:
-        val = str(cell.value) if cell.value else ""
-        max_length = max(max_length, len(val.encode('utf8'))//2+2)
+    for cell in col
+        val = str(cell.value) if cell.value else 
+        max_length = max(max_length, len(val.encode('utf8'))2+2)
     ws.column_dimensions[column].width = max(10, min(40, max_length))
 
 bio = BytesIO()
 wb.save(bio)
 st.download_button(
-    label="📥 Tải file Excel đã định dạng",
+    label=📥 Tải file Excel đã định dạng,
     data=bio.getvalue(),
     file_name=output_file,
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    mime=applicationvnd.openxmlformats-officedocument.spreadsheetml.sheet
 )
 
-st.caption("Bản quyền © 2024 DABA Sài Gòn. Hotline: 0909.625.808")
+# ==== Footer ====
+st.markdown(hr, unsafe_allow_html=True)
+st.markdown(div class='daba-hotline'Hotline 0909.625.808div, unsafe_allow_html=True)
+st.markdown(div class='daba-address'Địa chỉ Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCMdiv, unsafe_allow_html=True)
