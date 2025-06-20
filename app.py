@@ -10,8 +10,31 @@ import colorsys
 from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
-# ... import các thư viện xong ...
 
+# ===== PAGE CONFIG =====
+st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
+
+# ===== CSS TĂNG KÍCH THƯỚC MŨI TÊN & CHÈN CHỮ “TÙY CHỌN” SAU MŨI TÊN SIDEBAR =====
+st.markdown("""
+<style>
+[data-testid="collapsedControl"] svg {
+    width: 38px !important;
+    height: 38px !important;
+}
+[data-testid="collapsedControl"] {
+    margin-left: 10px !important;
+    margin-top: 12px !important;
+}
+[data-testid="collapsedControl"]::after {
+    content: " Tùy chọn";
+    font-size: 1.2rem;
+    color: #6a6a6a;
+    margin-left: 8px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+</style>
+""", unsafe_allow_html=True)
 # ---- TUỲ CHỌN PHÂN TÍCH GÓC TRÊN TRÁI ----
 st.markdown("""
 <div style='
