@@ -5,27 +5,53 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 import colorsys
 from io import BytesIO
-
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
 
+# ===== HEADER VÀ CẤU HÌNH =====
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
+st.markdown("""
+    <style>
+    .block-container {padding-top:2rem;}
+    .stApp {background: #F7F8FA;}
+    </style>
+    """, unsafe_allow_html=True)
 
-st.title("📊 Sales Dashboard MiniApp")
+st.image("https://i.imgur.com/4rSNwJK.png", width=75)
+st.title("Sales Dashboard MiniApp")
 st.markdown(
-    "<small style='color:gray;'>Phiên bản tối ưu cho DABA Sài Gòn. Tải lên file Excel, xem bảng, biểu đồ, xuất file đẹp với màu nhóm tự động.</small>",
+    "<small style='color:gray;'>DABA Sài Gòn – Dashboard phân tích & quản trị đại lý. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.</small>",
     unsafe_allow_html=True
 )
 
-# 1. Upload file
-uploaded_file = st.file_uploader("Tải lên file Excel (xlsx)", type="xlsx")
+# ===== SIDEBAR =====
+with st.sidebar:
+    st.header("🔎 Tùy chọn hiển thị & phân tích")
+    chart_type = st.radio("Chọn biểu đồ:", ["Cột chồng", "Sunburst", "Pareto", "Pie"], horizontal=False)
+    filter_nganh = st.multiselect("Lọc theo nhóm khách hàng:", options=['Catalyst', 'Visionary', 'Trailblazer'], default=[])
+    st.divider()
+    st.info("Bạn có thể upload lại file mới hoặc làm lại bất cứ lúc nào.")
+    st.caption("© 2024 DABA Sài Gòn. Hỗ trợ: 0909.625.808")
+
+# ===== UPLOAD FILE =====
+uploaded_file = st.file_uploader("### 1. Tải lên file Excel (.xlsx)", type="xlsx", help="Chỉ nhận Excel, <200MB.")
+
 if not uploaded_file:
+    st.info("Hãy upload file Excel mẫu để bắt đầu sử dụng Dashboard.")
+    st.markdown("---")
+    with st.expander("📋 Xem hướng dẫn & file mẫu", expanded=False):
+        st.markdown(
+            "- Nhấn **Browse files** hoặc kéo thả file.\n"
+            "- File cần có các cột: **Mã khách hàng, Tên khách hàng, Nhóm khách hàng, Tổng bán trừ trả hàng**.\n"
+            "- Xem file mẫu: [Download Excel mẫu](https://github.com/streamlit/example-data/raw/main/agency_sample.xlsx)"
+        )
     st.stop()
 
+# ===== XỬ LÝ DỮ LIỆU =====
 df = pd.read_excel(uploaded_file)
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
 
-# 2. Tính "Cấp dưới"
+# "Cấp dưới"
 cap_duoi_list = []
 for idx, row in df.iterrows():
     ma_kh = row['Mã khách hàng']
@@ -40,7 +66,7 @@ for idx, row in df.iterrows():
     cap_duoi_list.append(f"Cấp dưới {ten_cap_tren}" if ten_cap_tren else "")
 df['Cấp dưới'] = cap_duoi_list
 
-# 3. Tính "Số thuộc cấp"
+# "Số thuộc cấp"
 so_thuoc_cap = []
 for idx, row in df.iterrows():
     ma_kh = row['Mã khách hàng']
@@ -48,7 +74,7 @@ for idx, row in df.iterrows():
     so_thuoc_cap.append(count)
 df['Số thuộc cấp'] = so_thuoc_cap
 
-# 4. Doanh số hệ thống
+# "Doanh số hệ thống"
 def tinh_doanh_so_he_thong(df_in):
     dsht = []
     for idx, row in df_in.iterrows():
@@ -57,10 +83,9 @@ def tinh_doanh_so_he_thong(df_in):
         subtotal = df_in.loc[mask, 'Tổng bán trừ trả hàng'].sum()
         dsht.append(subtotal)
     return dsht
-
 df['Doanh số hệ thống'] = tinh_doanh_so_he_thong(df)
 
-# 5. Hoa hồng
+# Hoa hồng
 network = {
     'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
     'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
@@ -70,15 +95,27 @@ df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).
 df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
 df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 
-st.success("✅ Đã xử lý xong dữ liệu. Xem bảng, biểu đồ hoặc tải kết quả ngay bên dưới.")
+# Filter nếu chọn nhóm
+if filter_nganh:
+    df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
 
-# 6. Hiển thị bảng dữ liệu
-st.subheader("Bảng kết quả")
+# ===== BẢNG DỮ LIỆU & CHÚ GIẢI =====
+with st.expander("📋 Giải thích & các trường dữ liệu", expanded=False):
+    st.markdown("""
+    **Các trường dữ liệu chính:**  
+    - `Cấp dưới`: Tên khách hàng cấp trên trực tiếp.
+    - `Số thuộc cấp`: Số lượng khách hàng thuộc hệ thống nhánh này.
+    - `Doanh số hệ thống`: Tổng doanh số của tất cả cấp dưới thuộc nhánh.
+    - `override_comm`: Tiền hoa hồng từ hệ thống cấp dưới (áp dụng tỷ lệ theo nhóm khách hàng).
+    """)
+
+st.subheader("2. Bảng dữ liệu đại lý đã xử lý")
 st.dataframe(df, use_container_width=True, hide_index=True)
 
-# 7. Biểu đồ
-tab1, tab2, tab3, tab4 = st.tabs(["Tổng bán & Hoa hồng hệ thống", "Sunburst", "Pareto", "Pie chart"])
-with tab1:
+# ===== BIỂU ĐỒ PHÂN TÍCH =====
+st.subheader("3. Phân tích biểu đồ dữ liệu")
+
+if chart_type == "Cột chồng":
     fig, ax = plt.subplots(figsize=(12,5))
     ind = np.arange(len(df))
     ax.bar(ind, df['Tổng bán trừ trả hàng'], width=0.5, label='Tổng bán cá nhân')
@@ -90,7 +127,7 @@ with tab1:
     ax.legend()
     st.pyplot(fig)
 
-with tab2:
+elif chart_type == "Sunburst":
     fig2 = px.sunburst(
         df,
         path=['Nhóm khách hàng', 'Tên khách hàng'],
@@ -99,7 +136,7 @@ with tab2:
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-with tab3:
+elif chart_type == "Pareto":
     df_sorted = df.sort_values('Tổng bán trừ trả hàng', ascending=False)
     cum_sum = df_sorted['Tổng bán trừ trả hàng'].cumsum()
     cum_perc = 100 * cum_sum / df_sorted['Tổng bán trừ trả hàng'].sum()
@@ -115,19 +152,19 @@ with tab3:
     fig3.tight_layout()
     st.pyplot(fig3)
 
-with tab4:
+elif chart_type == "Pie":
     fig4, ax4 = plt.subplots(figsize=(6,6))
     s = df.groupby('Nhóm khách hàng')['Tổng bán trừ trả hàng'].sum()
     ax4.pie(s, labels=s.index, autopct='%1.1f%%')
     ax4.set_title('Tỷ trọng doanh số theo nhóm khách hàng')
     st.pyplot(fig4)
 
-# 8. Xuất file đẹp, màu nhóm tương phản, cho tải về
+# ===== XUẤT FILE KẾT QUẢ ĐẸP =====
+st.subheader("4. Tải file kết quả định dạng chuyên nghiệp")
+
 output_file = 'sales_report_dep.xlsx'
 df.to_excel(output_file, index=False)
 
-# --- Định dạng file ---
-from openpyxl import load_workbook
 wb = load_workbook(output_file)
 ws = wb.active
 
@@ -209,7 +246,6 @@ for col in ws.columns:
         max_length = max(max_length, len(val.encode('utf8'))//2+2)
     ws.column_dimensions[column].width = max(10, min(40, max_length))
 
-# Xuất file ra memory để người dùng tải về
 bio = BytesIO()
 wb.save(bio)
 st.download_button(
@@ -218,3 +254,5 @@ st.download_button(
     file_name=output_file,
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
+
+st.caption("Bản quyền © 2024 DABA Sài Gòn. Hotline: 0909.625.808")
