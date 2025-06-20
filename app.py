@@ -50,19 +50,6 @@ w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
 
-# === Chỉ hiện duy nhất 1 lần logo, không lặp! ===
-# KHÔNG truyền use_column_width hoặc use_container_width cùng lúc với width.
-st.markdown("<div style='display:flex;justify-content:center;'>", unsafe_allow_html=True)
-st.image(logo_resized)  # Không có tham số width nào nữa!
-st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ===== Chỉ duy nhất 1 lần hiển thị logo, căn giữa, không warning =====
-st.markdown("<div style='display:flex;justify-content:center;'>", unsafe_allow_html=True)
-st.image(logo_resized)
-st.markdown("</div>", unsafe_allow_html=True)
-
-
 
 # === Căn giữa và hiển thị ===
 st.markdown("<div style='display:flex;justify-content:center;'>", unsafe_allow_html=True)
