@@ -1,6 +1,7 @@
 import streamlit as st
 from PIL import Image
 import math
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,53 +17,32 @@ st.markdown("""
     <style>
     .block-container {padding-top:1.2rem;}
     .stApp {background: #F7F8FA;}
+    img { border-radius: 0 !important; }  /* Không bo góc cho mọi ảnh */
     </style>
     """, unsafe_allow_html=True)
 
-
-import streamlit as st
-from PIL import Image
-import os
-
-# -- Xóa bo góc ảnh toàn bộ app --
-st.markdown("""
-    <style>
-    img { border-radius: 0 !important; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# ==== Load logo ====
+# ==== Load logo chỉ 1 lần ====
 LOGO_PATHS = [
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
 ]
-
 logo = None
 for path in LOGO_PATHS:
     if os.path.exists(path):
         logo = Image.open(path)
         break
-
 if logo is None:
     st.warning("Không tìm thấy file logo. Đảm bảo file logo-daba.png đã upload đúng thư mục app!")
     st.stop()
 
-# ==== Resize đúng chiều cao mong muốn ====
-desired_height = 28  # pixel (hoặc đổi 22, 18, 12 tuỳ nhỏ lớn)
+desired_height = 28  # pixel (chỉnh nhỏ/lớn tại đây)
 w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
 
-# ==== Hiển thị logo chỉ 1 lần, căn giữa, không warning ====
+# ==== Hiển thị logo duy nhất, căn giữa ====
 st.markdown("<div style='display:flex;justify-content:center;'>", unsafe_allow_html=True)
-st.image(logo_resized)  # KHÔNG có use_column_width, KHÔNG có use_container_width!
-st.markdown("</div>", unsafe_allow_html=True)
-
-
-
-# === Căn giữa và hiển thị ===
-st.markdown("<div style='display:flex;justify-content:center;'>", unsafe_allow_html=True)
-st.image(logo_resized, use_column_width=False)
+st.image(logo_resized)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # ===== HOTLINE & ĐỊA CHỈ =====
@@ -74,7 +54,7 @@ st.markdown(
     unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ===== TIÊU ĐỀ VÀ TÙY CHỌN PHÂN TÍCH (ngoài sidebar) =====
+# ===== TIÊU ĐỀ & TÙY CHỌN PHÂN TÍCH =====
 st.title("Sales Dashboard MiniApp")
 st.markdown(
     "<small style='color:gray;'>Dashboard phân tích & quản trị đại lý cho DABA Sài Gòn. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.</small>",
@@ -154,7 +134,7 @@ df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 if filter_nganh:
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
 
-# ===== BẢNG DỮ LIỆU & GIẢI THÍCH =====
+# ===== BẢNG DỮ LIỆU =====
 with st.expander("📋 Giải thích các trường dữ liệu", expanded=False):
     st.markdown("""
     **Các trường dữ liệu chính:**  
