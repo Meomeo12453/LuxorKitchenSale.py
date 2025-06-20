@@ -21,6 +21,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+import streamlit as st
+from PIL import Image
+import os
+
 # ==== Load logo, resize trước khi hiển thị ====
 LOGO_PATHS = [
     "logo-daba.png",
@@ -37,17 +41,24 @@ if logo is None:
     st.warning("Không tìm thấy file logo. Đảm bảo file logo-daba.png đã upload đúng thư mục app!")
     st.stop()
 
-desired_height = 28  # hoặc chỉnh nhỏ hơn tuỳ ý
+desired_height = 28  # pixel
 w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
 
-# ==== Hiển thị logo duy nhất, căn giữa, margin-bottom 20px ====
-st.markdown("""
-<div style='display:flex;justify-content:center;margin-bottom:20px;'>
+# ==== Căn giữa logo hoàn hảo với HTML, không bo góc, margin 20px ====
+import base64
+from io import BytesIO
+
+buffer = BytesIO()
+logo_resized.save(buffer, format="PNG")
+logo_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+st.markdown(f"""
+<div style="width:100%;display:flex;justify-content:center;margin-bottom:20px;">
+    <img src="data:image/png;base64,{logo_base64}" alt="logo" style="display:block;height:{desired_height}px;">
+</div>
 """, unsafe_allow_html=True)
-st.image(logo_resized)
-st.markdown("</div>", unsafe_allow_html=True)
 
 # ===== HOTLINE & ĐỊA CHỈ =====
 st.markdown(
