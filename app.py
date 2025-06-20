@@ -21,8 +21,8 @@ st.markdown("""
     height: 38px !important;
 }
 [data-testid="collapsedControl"] {
-    margin-left: 10px !important;
-    margin-top: 12px !important;
+    margin-left: 20px !important;
+    margin-top: 32px !important;
 }
 [data-testid="collapsedControl"]::after {
     content: " Tùy chọn";
