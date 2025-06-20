@@ -20,13 +20,14 @@ st.markdown("""
     img { border-radius: 0 !important; }
     </style>
     """, unsafe_allow_html=True)
-
 import streamlit as st
 from PIL import Image
 import os
+import base64
+from io import BytesIO
 
-# ==== Load logo, resize trước khi hiển thị ====
 LOGO_PATHS = [
+    "30313609-d84b-45c1-958e-7d50bf11b60c.png",  # logo mới nhất vừa up
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
 ]
@@ -38,27 +39,29 @@ for path in LOGO_PATHS:
         break
 
 if logo is None:
-    st.warning("Không tìm thấy file logo. Đảm bảo file logo-daba.png đã upload đúng thư mục app!")
+    st.warning("Không tìm thấy file logo.")
     st.stop()
 
-desired_height = 28  # pixel
+desired_height = 32  # pixel (hoặc 28, 36 tuỳ nhỏ lớn)
 w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
 
-# ==== Căn giữa logo hoàn hảo với HTML, không bo góc, margin 20px ====
-import base64
-from io import BytesIO
-
+# Encode lại để hiển thị
 buffer = BytesIO()
 logo_resized.save(buffer, format="PNG")
 logo_base64 = base64.b64encode(buffer.getvalue()).decode()
 
+# ======= Thêm khoảng trắng trên đầu để không bị che ========
+st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)  # Tạo space phía trên
+
+# ======= Hiển thị logo căn giữa với margin trên và dưới ======
 st.markdown(f"""
-<div style="width:100%;display:flex;justify-content:center;margin-bottom:20px;">
+<div style="width:100%;display:flex;justify-content:center;margin-top:0px;margin-bottom:20px;">
     <img src="data:image/png;base64,{logo_base64}" alt="logo" style="display:block;height:{desired_height}px;">
 </div>
 """, unsafe_allow_html=True)
+
 
 # ===== HOTLINE & ĐỊA CHỈ =====
 st.markdown(
