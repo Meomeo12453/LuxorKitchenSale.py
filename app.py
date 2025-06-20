@@ -88,12 +88,7 @@ st.markdown(
     unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ===== TIÊU ĐỀ & TÙY CHỌN PHÂN TÍCH =====
-st.title("Sales Dashboard MiniApp")
-st.markdown(
-    "<small style='color:gray;'>Dashboard phân tích & quản trị đại lý cho DABA Sài Gòn. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.</small>",
-    unsafe_allow_html=True)
-st.markdown("## 🔎 Tùy chọn phân tích")
+
 
 # ===== SIDEBAR CHỨC NĂNG =====
 with st.sidebar:
