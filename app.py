@@ -19,17 +19,19 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+
+import streamlit as st
 from PIL import Image
 import os
-import streamlit as st
 
-# -- Chặn CSS bo góc ảnh --
+# -- Xóa bo góc ảnh toàn bộ app --
 st.markdown("""
     <style>
     img { border-radius: 0 !important; }
     </style>
     """, unsafe_allow_html=True)
 
+# ==== Load logo ====
 LOGO_PATHS = [
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
@@ -45,10 +47,17 @@ if logo is None:
     st.warning("Không tìm thấy file logo. Đảm bảo file logo-daba.png đã upload đúng thư mục app!")
     st.stop()
 
-desired_height = 78  # pixel, hoặc chỉnh nhỏ hơn tùy ý
+# ==== Resize đúng chiều cao mong muốn ====
+desired_height = 28  # pixel (hoặc đổi 22, 18, 12 tuỳ nhỏ lớn)
 w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
+
+# ==== Hiển thị logo chỉ 1 lần, căn giữa, không warning ====
+st.markdown("<div style='display:flex;justify-content:center;'>", unsafe_allow_html=True)
+st.image(logo_resized)  # KHÔNG có use_column_width, KHÔNG có use_container_width!
+st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # === Căn giữa và hiển thị ===
