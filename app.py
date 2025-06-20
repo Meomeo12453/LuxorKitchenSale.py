@@ -24,7 +24,7 @@ try:
     logo = Image.open("logo-daba.png")  # Đảm bảo file nằm cùng thư mục, đúng tên này!
 except Exception:
     logo = Image.open("19ca8d5f-56f2-457d-92e9-5b8163046b9a.png")  # Nếu dùng file vừa upload
-target_height = 38  # pixel ~ 1cm
+target_height = 5  # pixel ~ 1cm
 w, h = logo.size
 target_width = math.ceil((w / h) * target_height)
 st.image(logo, width=target_width, use_column_width=False)
