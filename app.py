@@ -1,4 +1,6 @@
 import streamlit as st
+from PIL import Image
+import math
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,45 +10,51 @@ from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
 
-# ==== Cấu hình layout & style ====
+# ===== Cấu hình giao diện =====
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 st.markdown("""
     <style>
     .block-container {padding-top:1.2rem;}
     .stApp {background: #F7F8FA;}
-    .daba-logo {display:flex;justify-content:center;margin-bottom:10px;}
-    .daba-hotline {text-align:center;font-size:16px;color:#1570af;font-weight:600;}
-    .daba-address {text-align:center;font-size:14px;color:#555;}
     </style>
     """, unsafe_allow_html=True)
 
-# ==== LOGO & HEADER ====
+# ===== LOGO căn giữa, cao 1cm =====
+try:
+    logo = Image.open("logo-daba.png")  # Đảm bảo file nằm cùng thư mục, đúng tên này!
+except Exception:
+    logo = Image.open("19ca8d5f-56f2-457d-92e9-5b8163046b9a.png")  # Nếu dùng file vừa upload
+target_height = 38  # pixel ~ 1cm
+w, h = logo.size
+target_width = math.ceil((w / h) * target_height)
+st.image(logo, width=target_width, use_column_width=False)
+
+# ===== HOTLINE & ĐỊA CHỈ =====
 st.markdown(
-    "<div class='daba-logo'>"
-    "<img src='logo-daba.png' width='210' style='border-radius:24px;box-shadow:0 0 12px #eee;'>"
-    "</div>",
-    unsafe_allow_html=True
-)
-st.markdown("<div class='daba-hotline'>Hotline: 0909.625.808</div>", unsafe_allow_html=True)
-st.markdown("<div class='daba-address'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>", unsafe_allow_html=True)
+    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
+    unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
+    unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
+# ===== TIÊU ĐỀ VÀ TÙY CHỌN PHÂN TÍCH (ngoài sidebar) =====
 st.title("Sales Dashboard MiniApp")
 st.markdown(
     "<small style='color:gray;'>Dashboard phân tích & quản trị đại lý cho DABA Sài Gòn. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.</small>",
-    unsafe_allow_html=True
-)
+    unsafe_allow_html=True)
+st.markdown("## 🔎 Tùy chọn phân tích")
 
-# ==== SIDEBAR ====
+# ===== SIDEBAR CHỨC NĂNG =====
 with st.sidebar:
-    st.header("🔎 Tuỳ chọn phân tích")
+    st.header("Tùy chọn phân tích")
     chart_type = st.radio("Chọn biểu đồ:", ["Cột chồng", "Sunburst", "Pareto", "Pie"], horizontal=False)
     filter_nganh = st.multiselect("Lọc theo nhóm khách hàng:", options=['Catalyst', 'Visionary', 'Trailblazer'], default=[])
     st.divider()
     st.info("Upload lại file mới hoặc bấm F5 để làm lại.")
     st.caption("© 2024 DABA Sài Gòn – Hotline: 0909.625.808")
 
-# ==== UPLOAD FILE ====
+# ===== UPLOAD FILE =====
 uploaded_file = st.file_uploader("### 1. Tải lên file Excel (.xlsx)", type="xlsx", help="Chỉ nhận Excel, <200MB.")
 if not uploaded_file:
     st.info("💡 Hãy upload file Excel mẫu để bắt đầu sử dụng Dashboard.")
@@ -58,7 +66,7 @@ if not uploaded_file:
         )
     st.stop()
 
-# ==== XỬ LÝ DỮ LIỆU ====
+# ===== XỬ LÝ DỮ LIỆU =====
 df = pd.read_excel(uploaded_file)
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
 
@@ -110,7 +118,7 @@ df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 if filter_nganh:
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
 
-# ==== HIỂN THỊ BẢNG DỮ LIỆU & GIẢI THÍCH ====
+# ===== BẢNG DỮ LIỆU & GIẢI THÍCH =====
 with st.expander("📋 Giải thích các trường dữ liệu", expanded=False):
     st.markdown("""
     **Các trường dữ liệu chính:**  
@@ -123,7 +131,7 @@ with st.expander("📋 Giải thích các trường dữ liệu", expanded=False
 st.subheader("2. Bảng dữ liệu đại lý đã xử lý")
 st.dataframe(df, use_container_width=True, hide_index=True)
 
-# ==== BIỂU ĐỒ PHÂN TÍCH ====
+# ===== BIỂU ĐỒ PHÂN TÍCH =====
 st.subheader("3. Biểu đồ phân tích dữ liệu")
 
 if chart_type == "Cột chồng":
@@ -139,7 +147,6 @@ if chart_type == "Cột chồng":
     st.pyplot(fig)
 
 elif chart_type == "Sunburst":
-    # Sửa lỗi: Sunburst plotly trên cloud không tự show, phải trả về fig object cho st.plotly_chart
     try:
         fig2 = px.sunburst(
             df,
@@ -180,7 +187,7 @@ elif chart_type == "Pie":
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pie chart: {e}")
 
-# ==== XUẤT FILE ĐẸP, TẢI VỀ ====
+# ===== XUẤT FILE ĐẸP, TẢI VỀ =====
 st.subheader("4. Tải file kết quả định dạng màu nhóm")
 
 output_file = 'sales_report_dep.xlsx'
@@ -275,7 +282,11 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
-# ==== Footer ====
+# ===== Footer =====
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<div class='daba-hotline'>Hotline: 0909.625.808</div>", unsafe_allow_html=True)
-st.markdown("<div class='daba-address'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>", unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
+    unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
+    unsafe_allow_html=True)
