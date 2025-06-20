@@ -10,6 +10,22 @@ import colorsys
 from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
+# ... import các thư viện xong ...
+
+# ---- TUỲ CHỌN PHÂN TÍCH GÓC TRÊN TRÁI ----
+st.markdown("""
+<div style='
+    position: absolute;
+    top: 20px;
+    left: 30px;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #3a3a3a;
+    z-index: 9999;
+'>
+    🔎 Tùy chọn phân tích
+</div>
+""", unsafe_allow_html=True)
 
 # ===== Cấu hình giao diện =====
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
@@ -42,7 +58,7 @@ if logo is None:
     st.warning("Không tìm thấy file logo.")
     st.stop()
 
-desired_height = 36  # pixel (hoặc 28, 36 tuỳ nhỏ lớn)
+desired_height = 90  # pixel (hoặc 28, 36 tuỳ nhỏ lớn)
 w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
