@@ -42,7 +42,7 @@ if logo is None:
     st.warning("Không tìm thấy file logo.")
     st.stop()
 
-desired_height = 90  # pixel (hoặc 28, 36 tuỳ nhỏ lớn)
+desired_height = 36  # pixel (hoặc 28, 36 tuỳ nhỏ lớn)
 w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
