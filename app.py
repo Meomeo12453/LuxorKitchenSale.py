@@ -1,6 +1,5 @@
 import streamlit as st
 from PIL import Image
-import math
 import os
 import pandas as pd
 import numpy as np
@@ -11,10 +10,10 @@ from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
 
-# ===== PAGE CONFIG =====
+# ===== PAGE CONFIG & CSS =====
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 
-# ===== CSS TĂNG KÍCH THƯỚC MŨI TÊN & CHÈN CHỮ “TÙY CHỌN” SAU MŨI TÊN SIDEBAR =====
+# Tăng kích thước mũi tên sidebar, thêm chữ "Tùy chọn"
 st.markdown("""
 <style>
 [data-testid="collapsedControl"] svg {
@@ -33,76 +32,50 @@ st.markdown("""
     font-weight: 600;
     vertical-align: middle;
 }
+.stApp {background: #F7F8FA;}
+img { border-radius: 0 !important; }
+#tuychon {
+    position: absolute;
+    left: 32px;
+    top: 18px;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #444;
+    z-index: 100;
+}
 </style>
 """, unsafe_allow_html=True)
-# ---- TUỲ CHỌN PHÂN TÍCH GÓC TRÊN TRÁI ----
-st.markdown("""
-<div style='
-    position: absolute;
-    top: 20px;
-    left: 30px;
-    font-size: 2rem;
-    font-weight: 600;
-    color: #3a3a3a;
-    z-index: 9999;
-'>
-    🔎 Tùy chọn phân tích
-</div>
-""", unsafe_allow_html=True)
 
-# ===== Cấu hình giao diện =====
-st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
-st.markdown("""
-    <style>
-    .block-container {padding-top:1.2rem;}
-    .stApp {background: #F7F8FA;}
-    img { border-radius: 0 !important; }
-    </style>
-    """, unsafe_allow_html=True)
-import streamlit as st
-from PIL import Image
-import os
-import base64
-from io import BytesIO
+# Hiển thị tùy chọn phân tích (góc trái trên cùng)
+st.markdown('<div id="tuychon">🔎 Tùy chọn phân tích</div>', unsafe_allow_html=True)
 
+# ==== Logo (căn giữa, resize đúng tỉ lệ, không bị cắt) ====
 LOGO_PATHS = [
-    "30313609-d84b-45c1-958e-7d50bf11b60c.png",  # logo mới nhất vừa up
     "logo-daba.png",
-    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
+    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png",
+    "30313609-d84b-45c1-958e-7d50bf11b60c.png",
+    "164153a0-0c51-43bb-8a81-9600118a0045.png",
+    "002f43d6-a413-41d0-b88a-cde6a1a1a98c.png",
 ]
-
 logo = None
 for path in LOGO_PATHS:
     if os.path.exists(path):
         logo = Image.open(path)
         break
 
-if logo is None:
+if logo:
+    # Resize logo để chiều cao tầm 40px (hợp lý cho cả mobile)
+    desired_height = 40
+    w, h = logo.size
+    new_width = int((w / h) * desired_height)
+    logo_resized = logo.resize((new_width, desired_height))
+    st.markdown("<div style='width:100%;text-align:center;margin-top:16px;margin-bottom:10px;'>", unsafe_allow_html=True)
+    st.image(logo_resized)
+    st.markdown("</div>", unsafe_allow_html=True)
+else:
     st.warning("Không tìm thấy file logo.")
-    st.stop()
 
-desired_height = 90  # pixel (hoặc 28, 36 tuỳ nhỏ lớn)
-w, h = logo.size
-new_width = int((w / h) * desired_height)
-logo_resized = logo.resize((new_width, desired_height))
-
-# Encode lại để hiển thị
-buffer = BytesIO()
-logo_resized.save(buffer, format="PNG")
-logo_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-# ======= Thêm khoảng trắng trên đầu để không bị che ========
-st.markdown('<div style="height:36px;"></div>', unsafe_allow_html=True)  # Tạo space phía trên
-
-# ======= Hiển thị logo căn giữa với margin trên và dưới ======
-st.markdown(f"""
-<div style="width:100%;display:flex;justify-content:center;margin-top:0px;margin-bottom:30px;">
-    <img src="data:image/png;base64,{logo_base64}" alt="logo" style="display:block;height:{desired_height}px;">
-</div>
-""", unsafe_allow_html=True)
-
-
-# ===== HOTLINE & ĐỊA CHỈ =====
+# ===== HOTLINE & ĐỊA CHỈ (căn giữa) =====
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
     unsafe_allow_html=True)
@@ -111,7 +84,11 @@ st.markdown(
     unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-
+# ===== BẮT ĐẦU DASHBOARD =====
+st.title("Sales Dashboard MiniApp")
+st.markdown(
+    "<small style='color:gray;'>Dashboard phân tích & quản trị đại lý cho DABA Sài Gòn. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.</small>",
+    unsafe_allow_html=True)
 
 # ===== SIDEBAR CHỨC NĂNG =====
 with st.sidebar:
@@ -134,8 +111,19 @@ if not uploaded_file:
         )
     st.stop()
 
-# ===== XỬ LÝ DỮ LIỆU =====
-df = pd.read_excel(uploaded_file)
+# ===== XỬ LÝ DỮ LIỆU & CHECK CỘT =====
+required_columns = ['Mã khách hàng', 'Tên khách hàng', 'Nhóm khách hàng', 'Tổng bán trừ trả hàng']
+try:
+    df = pd.read_excel(uploaded_file)
+    df.columns = [c.strip() for c in df.columns]  # loại bỏ dấu cách thừa
+    missing = [c for c in required_columns if c not in df.columns]
+    if missing:
+        st.error(f"❌ Thiếu các cột bắt buộc: {', '.join(missing)}. Vui lòng kiểm tra lại file Excel!")
+        st.stop()
+except Exception as e:
+    st.error(f"Lỗi khi đọc file: {e}")
+    st.stop()
+
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
 
 # "Cấp dưới"
@@ -186,7 +174,7 @@ df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 if filter_nganh:
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
 
-# ===== BẢNG DỮ LIỆU =====
+# ===== BẢNG DỮ LIỆU & GIẢI THÍCH =====
 with st.expander("📋 Giải thích các trường dữ liệu", expanded=False):
     st.markdown("""
     **Các trường dữ liệu chính:**  
