@@ -23,18 +23,15 @@ from PIL import Image
 import math
 
 # ===== LOGO căn giữa, rất nhỏ (12px ~ 0.3cm) =====
-try:
-    logo = Image.open("logo-daba.png")
-except Exception:
-    logo = Image.open("19ca8d5f-56f2-457d-92e9-5b8163046b9a.png")
+import math
 
-target_height = 12  # pixel (rất nhỏ)
+target_height = 28  # 28px, nhỏ gọn vừa dòng chữ hotline
 w, h = logo.size
 target_width = math.ceil((w / h) * target_height)
+
 st.markdown("<div style='display:flex;justify-content:center;'>", unsafe_allow_html=True)
 st.image(logo, width=target_width, use_column_width=False)
 st.markdown("</div>", unsafe_allow_html=True)
-
 
 
 # ===== HOTLINE & ĐỊA CHỈ =====
