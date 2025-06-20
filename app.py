@@ -45,7 +45,7 @@ if logo is None:
     st.warning("Không tìm thấy file logo. Đảm bảo file logo-daba.png đã upload đúng thư mục app!")
     st.stop()
 
-desired_height = 38  # pixel, hoặc chỉnh nhỏ hơn tùy ý
+desired_height = 78  # pixel, hoặc chỉnh nhỏ hơn tùy ý
 w, h = logo.size
 new_width = int((w / h) * desired_height)
 logo_resized = logo.resize((new_width, desired_height))
