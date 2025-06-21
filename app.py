@@ -11,15 +11,21 @@ from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
 import random
 
-# ===== Cấu hình giao diện =====
-st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
+# ===== CSS responsive, tối ưu cho mobile =====
 st.markdown("""
     <style>
-    .block-container {padding-top:1.2rem;}
+    .block-container {padding-top:0.7rem; max-width:100vw !important;}
     .stApp {background: #F7F8FA;}
     img { border-radius: 0 !important; }
+    h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
+    @media (max-width: 600px) {
+        .block-container { padding-left: 0.6rem; padding-right: 0.6rem; }
+        h1, h2, h3 { font-size: 1.04rem !important; }
+        label, .css-1c7y2kd { font-size: 0.97rem !important; }
+        .stRadio > label { font-size: 0.97rem !important; }
+    }
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 LOGO_PATHS = [
     "logo-daba.png",
@@ -53,8 +59,8 @@ st.markdown(
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-# ===== GIAO DIỆN TÙY CHỌN PHÂN TÍCH =====
-st.markdown("## 🔎 Tùy chọn phân tích")
+# ======= GIAO DIỆN: TIÊU ĐỀ PHÂN TÍCH + CONTROL =======
+st.markdown("### 🔎 Tùy chọn phân tích")
 col1, col2 = st.columns([2, 1])
 with col1:
     chart_type = st.radio(
@@ -111,7 +117,6 @@ def get_all_descendants(code, parent_map):
         result.extend(get_all_descendants(child, parent_map))
     return result
 
-# Tính "Số cấp dưới" và "Doanh số hệ thống"
 desc_counts = []
 ds_he_thong = []
 for idx, row in df.iterrows():
@@ -126,7 +131,6 @@ for idx, row in df.iterrows():
 df['Số cấp dưới'] = desc_counts
 df['Doanh số hệ thống'] = ds_he_thong
 
-# ---- Hoa hồng ----
 network = {
     'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
     'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
@@ -150,12 +154,12 @@ with st.expander("📋 Giải thích các trường dữ liệu", expanded=False
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-st.subheader("2. Bảng dữ liệu đại lý đã xử lý")
+st.markdown("### 2. Bảng dữ liệu đại lý đã xử lý")
 st.dataframe(df, use_container_width=True, hide_index=True)
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-st.subheader("3. Biểu đồ phân tích dữ liệu")
+st.markdown("### 3. Biểu đồ phân tích dữ liệu")
 
 if chart_type == "Biểu đồ cột chồng":
     fig, ax = plt.subplots(figsize=(12,5))
@@ -212,7 +216,7 @@ elif chart_type == "Biểu đồ tròn (Pie)":
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-st.subheader("4. Tải file kết quả định dạng màu nhóm F1")
+st.markdown("### 4. Tải file kết quả định dạng màu nhóm F1")
 
 output_file = 'sales_report_dep.xlsx'
 df.to_excel(output_file, index=False)
@@ -224,7 +228,6 @@ ws = wb.active
 col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
 col_parent = [cell.value for cell in ws[1]].index('parent_id')+1
 
-# Tìm tất cả các mã cha (có ít nhất 1 con trực tiếp)
 ma_cha_list = df[df['Mã khách hàng'].isin(df['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
 
 def pastel_color(seed_val):
@@ -237,7 +240,6 @@ def pastel_color(seed_val):
 
 ma_cha_to_color = {ma_cha: PatternFill(start_color=pastel_color(ma_cha), end_color=pastel_color(ma_cha), fill_type='solid') for ma_cha in ma_cha_list}
 
-# Tô màu cho chính cha và các con F1 của nó, còn lại để trắng
 for row in range(2, ws.max_row + 1):
     ma_kh = str(ws.cell(row=row, column=col_makh).value)
     parent_id = ws.cell(row=row, column=col_parent).value
