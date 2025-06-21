@@ -286,7 +286,7 @@ downloaded = st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 if downloaded:
-    st.toast("✅ Đã tải xuống!", icon="✅")
+    st.toast("Đã tải xuống!", icon="✅")
 
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
