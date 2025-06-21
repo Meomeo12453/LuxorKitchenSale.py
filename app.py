@@ -10,6 +10,7 @@ from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
 import random
+import base64
 
 # ===== CSS responsive, tối ưu cho mobile =====
 st.markdown("""
@@ -27,6 +28,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# ===== Logo căn giữa tuyệt đối, cách hotline 5px =====
 LOGO_PATHS = [
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png",
@@ -34,9 +36,11 @@ LOGO_PATHS = [
     "002f43d6-a413-41d0-b88a-cde6a1a1a98c.png"
 ]
 logo = None
+logo_path_actual = None
 for path in LOGO_PATHS:
     if os.path.exists(path):
         logo = Image.open(path)
+        logo_path_actual = path
         break
 
 if logo is not None:
@@ -44,12 +48,24 @@ if logo is not None:
     w, h = logo.size
     new_width = int((w / h) * desired_height)
     logo_resized = logo.resize((new_width, desired_height))
-    st.markdown("<div style='display:flex;justify-content:center;margin-bottom:12px;'>", unsafe_allow_html=True)
-    st.image(logo_resized)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Encode image to base64 for perfect compatibility with Streamlit HTML
+    buffered = BytesIO()
+    logo_resized.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    st.markdown(
+        f"""
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding-top:4px;padding-bottom:0;">
+            <img src="data:image/png;base64,{img_str}" 
+                 width="{new_width}" height="{desired_height}" style="display:block;margin:auto;" />
+            <div style="height:5px;"></div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 else:
     st.warning("Không tìm thấy file logo. Đảm bảo file logo đã upload đúng thư mục app!")
 
+# Hotline (ngay dưới logo, cách 5px)
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
     unsafe_allow_html=True)
@@ -263,12 +279,14 @@ for col in range(1, ws.max_column + 1):
 
 bio = BytesIO()
 wb.save(bio)
-st.download_button(
+downloaded = st.download_button(
     label="📥 Tải file Excel đã định dạng",
     data=bio.getvalue(),
     file_name=output_file,
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
+if downloaded:
+    st.toast("✅ Đã tải xuống!", icon="✅", duration=2)
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
