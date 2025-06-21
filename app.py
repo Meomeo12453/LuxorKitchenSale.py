@@ -9,6 +9,7 @@ import colorsys
 from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
+import random
 
 # ===== Cấu hình giao diện =====
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
@@ -49,22 +50,25 @@ st.markdown(
 st.markdown(
     "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
     unsafe_allow_html=True)
-st.markdown("<br>", unsafe_allow_html=True)
 
-st.title("Sales Dashboard MiniApp")
-st.markdown(
-    "<small style='color:gray;'>Dashboard phân tích & quản trị đại lý cho DABA Sài Gòn. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.</small>",
-    unsafe_allow_html=True)
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
+# ===== GIAO DIỆN TÙY CHỌN PHÂN TÍCH =====
 st.markdown("## 🔎 Tùy chọn phân tích")
-col1, col2 = st.columns(2)
+col1, col2 = st.columns([2, 1])
 with col1:
-    chart_type = st.radio("Chọn biểu đồ:", ["Cột chồng", "Sunburst", "Pareto", "Pie"], horizontal=True)
+    chart_type = st.radio(
+        "Chọn loại biểu đồ:",
+        ["Biểu đồ cột chồng", "Sơ đồ Sunburst", "Biểu đồ Pareto", "Biểu đồ tròn (Pie)"],
+        horizontal=True
+    )
 with col2:
     filter_nganh = st.multiselect("Lọc theo nhóm khách hàng:", ["Catalyst", "Visionary", "Trailblazer"], default=[])
 
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+
 st.markdown("### 1. Tải lên file Excel (.xlsx)")
-uploaded_file = st.file_uploader("", type="xlsx", help="Chỉ nhận Excel, <200MB.")
+uploaded_file = st.file_uploader("**Kéo thả hoặc chọn file Excel khách hàng**", type="xlsx", help="Chỉ nhận Excel, <200MB.")
 if not uploaded_file:
     st.info("💡 Hãy upload file Excel mẫu để bắt đầu sử dụng Dashboard.")
     with st.expander("📋 Xem hướng dẫn & file mẫu", expanded=False):
@@ -74,6 +78,8 @@ if not uploaded_file:
             "- Nếu lỗi, kiểm tra lại tiêu đề cột trong file Excel."
         )
     st.stop()
+
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
 # ===== XỬ LÝ DỮ LIỆU =====
 df = pd.read_excel(uploaded_file)
@@ -97,7 +103,6 @@ for idx, row in df.iterrows():
     if pd.notnull(pid):
         parent_map.setdefault(str(pid), []).append(str(row['Mã khách hàng']))
 
-# Hàm đệ quy lấy toàn bộ cấp dưới (mọi tầng)
 def get_all_descendants(code, parent_map):
     result = []
     direct = parent_map.get(str(code), [])
@@ -143,13 +148,16 @@ with st.expander("📋 Giải thích các trường dữ liệu", expanded=False
     - `override_comm`: Hoa hồng từ hệ thống cấp dưới (áp dụng tỷ lệ từng nhóm).
     """)
 
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+
 st.subheader("2. Bảng dữ liệu đại lý đã xử lý")
 st.dataframe(df, use_container_width=True, hide_index=True)
 
-# ===== BIỂU ĐỒ PHÂN TÍCH =====
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+
 st.subheader("3. Biểu đồ phân tích dữ liệu")
 
-if chart_type == "Cột chồng":
+if chart_type == "Biểu đồ cột chồng":
     fig, ax = plt.subplots(figsize=(12,5))
     ind = np.arange(len(df))
     ax.bar(ind, df['Tổng bán trừ trả hàng'], width=0.5, label='Tổng bán cá nhân')
@@ -161,7 +169,7 @@ if chart_type == "Cột chồng":
     ax.legend()
     st.pyplot(fig)
 
-elif chart_type == "Sunburst":
+elif chart_type == "Sơ đồ Sunburst":
     try:
         fig2 = px.sunburst(
             df,
@@ -173,7 +181,7 @@ elif chart_type == "Sunburst":
     except Exception as e:
         st.error(f"Lỗi khi vẽ Sunburst chart: {e}")
 
-elif chart_type == "Pareto":
+elif chart_type == "Biểu đồ Pareto":
     try:
         df_sorted = df.sort_values('Tổng bán trừ trả hàng', ascending=False)
         cum_sum = df_sorted['Tổng bán trừ trả hàng'].cumsum()
@@ -192,7 +200,7 @@ elif chart_type == "Pareto":
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pareto chart: {e}")
 
-elif chart_type == "Pie":
+elif chart_type == "Biểu đồ tròn (Pie)":
     try:
         fig4, ax4 = plt.subplots(figsize=(6,6))
         s = df.groupby('Nhóm khách hàng')['Tổng bán trừ trả hàng'].sum()
@@ -202,17 +210,14 @@ elif chart_type == "Pie":
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pie chart: {e}")
 
-# ===== XUẤT FILE ĐẸP, TẢI VỀ (TÔ MÀU F1 CÙNG CHA) =====
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+
 st.subheader("4. Tải file kết quả định dạng màu nhóm F1")
 
 output_file = 'sales_report_dep.xlsx'
 df.to_excel(output_file, index=False)
 
-# Tô màu pastel, chỉ cha (có cấp dưới trực tiếp) và F1 cùng màu; các nhóm khác màu khác nhau
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill, Alignment, Font
-import random
-
+# Tô màu pastel, chỉ cha (có cấp dưới trực tiếp) và F1 cùng màu; các nhóm khác màu khác, còn lại trắng
 wb = load_workbook(output_file)
 ws = wb.active
 
@@ -223,20 +228,19 @@ col_parent = [cell.value for cell in ws[1]].index('parent_id')+1
 ma_cha_list = df[df['Mã khách hàng'].isin(df['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
 
 def pastel_color(seed_val):
-    random.seed(seed_val)
+    random.seed(str(seed_val))
     h = random.random()
-    s = 0.30 + random.random()*0.10  # saturation thấp
+    s = 0.28 + random.random()*0.09
     v = 0.97
     r, g, b = colorsys.hsv_to_rgb(h, s, v)
     return "%02X%02X%02X" % (int(r*255), int(g*255), int(b*255))
 
 ma_cha_to_color = {ma_cha: PatternFill(start_color=pastel_color(ma_cha), end_color=pastel_color(ma_cha), fill_type='solid') for ma_cha in ma_cha_list}
 
-# Tô màu cho chính cha và các con F1 của nó
+# Tô màu cho chính cha và các con F1 của nó, còn lại để trắng
 for row in range(2, ws.max_row + 1):
     ma_kh = str(ws.cell(row=row, column=col_makh).value)
     parent_id = ws.cell(row=row, column=col_parent).value
-    # Tô nếu là cha, hoặc là con F1 của cha nào đó
     if ma_kh in ma_cha_to_color:
         fill = ma_cha_to_color[ma_kh]
     elif parent_id in ma_cha_to_color:
@@ -246,7 +250,6 @@ for row in range(2, ws.max_row + 1):
     for col in range(1, ws.max_column + 1):
         ws.cell(row=row, column=col).fill = fill
 
-# Header màu vàng như cũ
 header_fill = PatternFill(start_color='FFE699', end_color='FFE699', fill_type='solid')
 header_font = Font(bold=True, color='000000')
 header_align = Alignment(horizontal='center', vertical='center')
@@ -265,8 +268,8 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
-# ===== Footer =====
-st.markdown("<hr>", unsafe_allow_html=True)
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
     unsafe_allow_html=True)
