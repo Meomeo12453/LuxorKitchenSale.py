@@ -83,7 +83,7 @@ if not uploaded_file:
 df = pd.read_excel(uploaded_file)
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
 
-# ---- Xác định parent-child logic mới (cấp trên dựa vào Ghi chú) ----
+# ---- Xác định parent_id (theo Ghi chú) ----
 parent_ids = []
 prev_ma_khach_hang = set()
 for idx, row in df.iterrows():
@@ -94,21 +94,38 @@ for idx, row in df.iterrows():
     prev_ma_khach_hang.add(row['Mã khách hàng'])
 df['parent_id'] = parent_ids
 
-# ---- Số thuộc cấp trực tiếp (F1) ----
-f1_counts = []
-for ma_kh in df['Mã khách hàng']:
-    f1_count = (df['parent_id'] == ma_kh).sum()
-    f1_counts.append(f1_count)
-df['Số thuộc cấp F1'] = f1_counts
+# ---- Xây dựng parent_map để phân tầng đa cấp ----
+parent_map = {}
+for idx, row in df.iterrows():
+    pid = row['parent_id']
+    if pd.notnull(pid):
+        parent_map.setdefault(str(pid), []).append(str(row['Mã khách hàng']))
 
-# ---- Tổng doanh số F1 (tổng doanh số của các cấp dưới trực tiếp) ----
-ds_f1 = []
-for ma_kh in df['Mã khách hàng']:
-    subtotal = df.loc[df['parent_id'] == ma_kh, 'Tổng bán trừ trả hàng'].sum()
-    ds_f1.append(subtotal)
-df['Doanh số F1'] = ds_f1
+# Hàm đệ quy lấy toàn bộ cấp dưới (mọi tầng)
+def get_all_descendants(code, parent_map):
+    result = []
+    direct = parent_map.get(str(code), [])
+    result.extend(direct)
+    for child in direct:
+        result.extend(get_all_descendants(child, parent_map))
+    return result
 
-# ---- Cấu trúc hoa hồng (tùy chỉnh theo từng nhóm) ----
+# Tính "Số cấp dưới" và "Doanh số hệ thống"
+desc_counts = []
+ds_he_thong = []
+for idx, row in df.iterrows():
+    code = str(row['Mã khách hàng'])
+    descendants = get_all_descendants(code, parent_map)
+    desc_counts.append(len(descendants))
+    if descendants:
+        doanhso = df[df['Mã khách hàng'].astype(str).isin(descendants)]['Tổng bán trừ trả hàng'].sum()
+    else:
+        doanhso = 0
+    ds_he_thong.append(doanhso)
+df['Số cấp dưới'] = desc_counts
+df['Doanh số hệ thống'] = ds_he_thong
+
+# ---- Hoa hồng ----
 network = {
     'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
     'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
@@ -116,7 +133,7 @@ network = {
 }
 df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('comm_rate', 0))
 df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
-df['override_comm'] = df['Doanh số F1'] * df['override_rate']
+df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 
 # ---- Filter nhóm ----
 if filter_nganh:
@@ -127,9 +144,9 @@ with st.expander("📋 Giải thích các trường dữ liệu", expanded=False
     st.markdown("""
     **Các trường dữ liệu chính:**  
     - `parent_id`: Mã khách hàng cấp trên trực tiếp (nếu có).
-    - `Số thuộc cấp F1`: Số thành viên trực tiếp dưới nhánh này.
-    - `Doanh số F1`: Tổng doanh số của các cấp dưới trực tiếp.
-    - `override_comm`: Hoa hồng từ hệ thống cấp dưới F1 (áp dụng tỷ lệ từng nhóm).
+    - `Số cấp dưới`: Tổng số thành viên hệ thống dưới nhánh này (đa tầng).
+    - `Doanh số hệ thống`: Tổng doanh số của tất cả cấp dưới (đa tầng).
+    - `override_comm`: Hoa hồng từ hệ thống cấp dưới (áp dụng tỷ lệ từng nhóm).
     """)
 
 st.subheader("2. Bảng dữ liệu đại lý đã xử lý")
@@ -191,15 +208,61 @@ elif chart_type == "Pie":
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pie chart: {e}")
 
-# ===== XUẤT FILE ĐẸP, TẢI VỀ =====
+# ===== XUẤT FILE ĐẸP, TẢI VỀ (TÔ MÀU HỆ THỐNG CHA-CON) =====
 st.subheader("4. Tải file kết quả định dạng màu nhóm")
 
 output_file = 'sales_report_dep.xlsx'
 df.to_excel(output_file, index=False)
 
+# --- Xác định từng cây hệ thống cho tô màu ---
+# Mỗi "root" (không có parent) và toàn bộ cây con sẽ cùng màu
+def get_full_tree(code, parent_map, visited=None):
+    if visited is None:
+        visited = set()
+    visited.add(code)
+    for child in parent_map.get(str(code), []):
+        if child not in visited:
+            get_full_tree(child, parent_map, visited)
+    return visited
+
+all_codes = df['Mã khách hàng'].astype(str).tolist()
+root_codes = df[df['parent_id'].isna()]['Mã khách hàng'].astype(str).tolist()
+
+group_dict = {}  # code → group_id
+group_list = []  # list các set group (mỗi group 1 màu)
+for idx, root in enumerate(root_codes):
+    group = get_full_tree(root, parent_map)
+    group_list.append(group)
+    for code in group:
+        group_dict[code] = idx
+
+for code in all_codes:
+    if code not in group_dict:
+        idx = len(group_list)
+        group_list.append({code})
+        group_dict[code] = idx
+
+# --- Tô màu các cây hệ thống ---
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill, Alignment, Font
+import colorsys
+
 wb = load_workbook(output_file)
 ws = wb.active
 
+def get_color(idx, total):
+    h = (idx * 0.97) / total
+    r, g, b = colorsys.hsv_to_rgb(h, 0.45, 1)
+    return "%02X%02X%02X" % (int(r*255), int(g*255), int(b*255))
+
+group_color = {idx: PatternFill(start_color=get_color(idx, len(group_list)),
+                               end_color=get_color(idx, len(group_list)),
+                               fill_type='solid')
+               for idx in range(len(group_list))}
+
+col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
+
+# Header màu vàng như cũ
 header_fill = PatternFill(start_color='FFE699', end_color='FFE699', fill_type='solid')
 header_font = Font(bold=True, color='000000')
 header_align = Alignment(horizontal='center', vertical='center')
@@ -209,74 +272,14 @@ for col in range(1, ws.max_column + 1):
     cell.font = header_font
     cell.alignment = header_align
 
-money_keywords = ['bán', 'doanh số', 'tiền', 'hoa hồng', 'comm', 'VND']
-cols_money = [col[0].column for col in ws.iter_cols(1, ws.max_column)
-              if any(key in (col[0].value or '').lower() for key in money_keywords)]
-
-col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
-col_role = [cell.value for cell in ws[1]].index('Nhóm khách hàng')+1
-
-all_codes = [str(ws.cell(row=i, column=col_makh).value) for i in range(2, ws.max_row+1)]
-prefix_groups = {}
-for length in range(len(max(all_codes, key=len)), 0, -1):
-    prefix_count = {}
-    for code in all_codes:
-        if len(code) < length:
-            continue
-        prefix = code[:length]
-        prefix_count.setdefault(prefix, []).append(code)
-    for prefix, codes in prefix_count.items():
-        if len(codes) > 1:
-            prefix_groups[prefix] = codes
-
-row_to_prefix = {}
-for idx, code in enumerate(all_codes):
-    best_prefix = ''
-    best_len = 0
-    for prefix in prefix_groups.keys():
-        if code.startswith(prefix) and len(prefix) > best_len:
-            best_prefix = prefix
-            best_len = len(prefix)
-    row_to_prefix[idx+2] = best_prefix if best_prefix else code
-
-prefix_set = set(row_to_prefix.values())
-prefix_list = sorted(prefix_set)
-def get_contrasting_color(idx, total):
-    h = idx / total
-    r, g, b = colorsys.hsv_to_rgb(h, 0.65, 1)
-    return "%02X%02X%02X" % (int(r*255), int(g*255), int(b*255))
-prefix_to_color = {prefix: PatternFill(start_color=get_contrasting_color(i, len(prefix_list)),
-                                       end_color=get_contrasting_color(i, len(prefix_list)),
-                                       fill_type='solid')
-                   for i, prefix in enumerate(prefix_list)}
-
 for row in range(2, ws.max_row + 1):
-    role = ws.cell(row=row, column=col_role).value
-    if role == 'Trailblazer':
-        fill = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
-    else:
-        fill = prefix_to_color[row_to_prefix[row]]
+    code = str(ws.cell(row=row, column=col_makh).value)
+    group_idx = group_dict.get(code, 0)
+    fill = group_color[group_idx]
     for col in range(1, ws.max_column + 1):
         ws.cell(row=row, column=col).fill = fill
 
-for col in range(1, ws.max_column + 1):
-    for row in range(2, ws.max_row+1):
-        cell = ws.cell(row=row, column=col)
-        if col in cols_money:
-            if isinstance(cell.value, (int, float)):
-                cell.number_format = '#,##0'
-            cell.alignment = Alignment(horizontal='right', vertical='center')
-        else:
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-
-for col in ws.columns:
-    max_length = 0
-    column = col[0].column_letter
-    for cell in col:
-        val = str(cell.value) if cell.value else ""
-        max_length = max(max_length, len(val.encode('utf8'))//2+2)
-    ws.column_dimensions[column].width = max(10, min(40, max_length))
-
+# (Có thể thêm định dạng căn lề, số tiền, v.v. như cũ nếu muốn)
 bio = BytesIO()
 wb.save(bio)
 st.download_button(
