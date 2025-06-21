@@ -240,7 +240,13 @@ st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_a
 st.markdown("### 4. Tải file kết quả định dạng màu nhóm F1")
 
 output_file = 'sales_report_dep.xlsx'
-df.to_excel(output_file, index=False)
+# Sắp xếp để các dòng cùng "Ghi chú" sẽ liên tiếp nhau
+df_export = df.sort_values(
+    by=['Ghi chú', 'Mã khách hàng'],
+    ascending=[True, True],
+    na_position='last'
+)
+df_export.to_excel(output_file, index=False)
 
 # Tô màu pastel, chỉ cha (có cấp dưới trực tiếp) và F1 cùng màu; các nhóm khác màu khác, còn lại trắng
 wb = load_workbook(output_file)
@@ -249,7 +255,7 @@ ws = wb.active
 col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
 col_parent = [cell.value for cell in ws[1]].index('parent_id')+1
 
-ma_cha_list = df[df['Mã khách hàng'].isin(df['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
+ma_cha_list = df_export[df_export['Mã khách hàng'].isin(df_export['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
 
 def pastel_color(seed_val):
     random.seed(str(seed_val))
@@ -299,5 +305,4 @@ st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
     unsafe_allow_html=True)
 st.markdown(
-    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
-    unsafe_allow_html=True)
+    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25
