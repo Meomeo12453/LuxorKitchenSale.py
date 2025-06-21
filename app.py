@@ -12,18 +12,22 @@ from openpyxl.styles import PatternFill, Alignment, Font
 import random
 import base64
 
-# ===== CSS responsive =====
+# ===== CSS responsive + ép radio chart_type thẳng hàng mobile =====
 st.markdown("""
     <style>
     .block-container {padding-top:0.7rem; max-width:100vw !important;}
     .stApp {background: #F7F8FA;}
     img { border-radius: 0 !important; }
-    h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
-    @media (max-width: 600px) {
-        .block-container { padding-left: 0.6rem; padding-right: 0.6rem; }
-        h1, h2, h3 { font-size: 1.04rem !important; }
-        label, .css-1c7y2kd { font-size: 0.97rem !important; }
-        .stRadio > label { font-size: 0.97rem !important; }
+    h1, h2, h3 { font-size: 1.10rem !important; font-weight:600;}
+    .stRadio > div { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 10px !important;}
+    .stRadio label { margin-right: 10px !important; font-size: 1.02rem !important;}
+    .stRadio [data-baseweb="radio"] { margin-bottom: 0 !important;}
+    @media (max-width: 700px) {
+        .block-container { padding-left: 0.4rem; padding-right: 0.4rem;}
+        h1, h2, h3 { font-size: 1.00rem !important; }
+        label, .css-1c7y2kd { font-size: 0.94rem !important; }
+        .stRadio label { font-size: 0.95rem !important;}
+        .stRadio > div { gap: 6px !important;}
     }
     </style>
 """, unsafe_allow_html=True)
@@ -70,22 +74,20 @@ st.markdown(
     unsafe_allow_html=True)
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-# ====== CONTROL ======
-st.markdown("### 🔎 Tùy chọn phân tích")
-col1, col2 = st.columns([2, 1])
-with col1:
-    chart_type = st.radio(
-        "Chọn loại biểu đồ:",
-        ["Biểu đồ cột chồng", "Sơ đồ Sunburst", "Biểu đồ Pareto", "Biểu đồ tròn (Pie)"],
-        horizontal=True
-    )
-with col2:
-    filter_nganh = st.multiselect("Lọc theo nhóm khách hàng:", ["Catalyst", "Visionary", "Trailblazer"], default=[])
+# ===== CONTROL: radio chart + filter thẳng hàng mobile =====
+st.markdown("### Tùy chọn phân tích")
+chart_type = st.radio(
+    "Chọn loại biểu đồ:",
+    ["Biểu đồ cột chồng", "Sơ đồ Sunburst", "Biểu đồ Pareto", "Biểu đồ tròn (Pie)"],
+    horizontal=True,
+    key="charttype"
+)
+filter_nganh = st.multiselect("Lọc theo nhóm khách hàng:", ["Catalyst", "Visionary", "Trailblazer"], default=[])
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
 st.markdown("### 1. Tải lên file Excel (.xlsx)")
-uploaded_file = st.file_uploader("**Kéo thả hoặc chọn file Excel khách hàng**", type="xlsx", help="Chỉ nhận Excel, <200MB.")
+uploaded_file = st.file_uploader("Kéo thả hoặc chọn file Excel khách hàng", type="xlsx", help="Chỉ nhận Excel, <200MB.")
 if not uploaded_file:
     st.info("💡 Hãy upload file Excel mẫu để bắt đầu sử dụng Dashboard.")
     with st.expander("📋 Xem hướng dẫn & file mẫu", expanded=False):
@@ -98,21 +100,16 @@ if not uploaded_file:
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-# ===== XỬ LÝ DỮ LIỆU, CHUẨN HÓA TỔNG QUÁT =====
+# ===== XỬ LÝ DỮ LIỆU, CHUẨN HÓA =====
 df = pd.read_excel(uploaded_file)
 
-# Chuẩn hóa mã khách hàng, ghi chú về chuỗi, bỏ khoảng trắng, NaN
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str).str.strip()
 df['Ghi chú'] = df['Ghi chú'].astype(str).str.strip()
 df['Ghi chú'] = df['Ghi chú'].replace({'None': None, 'nan': None, 'NaN': None, '': None})
 
-# Xử lý cột Tổng bán trừ trả hàng sang số
 df['Tổng bán trừ trả hàng'] = pd.to_numeric(df['Tổng bán trừ trả hàng'], errors='coerce').fillna(0)
 
-# Tạo set/list tất cả mã khách hàng
 all_codes = set(df['Mã khách hàng'])
-
-# parent_id chỉ là mã khách hàng khác và hợp lệ
 def get_parent_id(x):
     if pd.isnull(x) or x is None:
         return None
@@ -122,7 +119,6 @@ def get_parent_id(x):
     return None
 df['parent_id'] = df['Ghi chú'].apply(get_parent_id)
 
-# Xây parent_map
 parent_map = {}
 for idx, row in df.iterrows():
     pid = row['parent_id']
