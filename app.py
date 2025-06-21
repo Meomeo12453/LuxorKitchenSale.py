@@ -20,7 +20,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ==== Hiển thị logo căn giữa ====
 LOGO_PATHS = [
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png",
@@ -34,7 +33,7 @@ for path in LOGO_PATHS:
         break
 
 if logo is not None:
-    desired_height = 36  # pixel
+    desired_height = 36
     w, h = logo.size
     new_width = int((w / h) * desired_height)
     logo_resized = logo.resize((new_width, desired_height))
@@ -44,7 +43,6 @@ if logo is not None:
 else:
     st.warning("Không tìm thấy file logo. Đảm bảo file logo đã upload đúng thư mục app!")
 
-# ===== HOTLINE & ĐỊA CHỈ =====
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
     unsafe_allow_html=True)
@@ -53,13 +51,11 @@ st.markdown(
     unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ===== TIÊU ĐỀ =====
 st.title("Sales Dashboard MiniApp")
 st.markdown(
     "<small style='color:gray;'>Dashboard phân tích & quản trị đại lý cho DABA Sài Gòn. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.</small>",
     unsafe_allow_html=True)
 
-# ======= CÁC CONTROL PHÂN TÍCH TRÊN MAIN PAGE =======
 st.markdown("## 🔎 Tùy chọn phân tích")
 col1, col2 = st.columns(2)
 with col1:
@@ -135,11 +131,9 @@ df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).
 df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
 df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 
-# ---- Filter nhóm ----
 if filter_nganh:
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
 
-# ===== BẢNG DỮ LIỆU & GIẢI THÍCH =====
 with st.expander("📋 Giải thích các trường dữ liệu", expanded=False):
     st.markdown("""
     **Các trường dữ liệu chính:**  
@@ -208,59 +202,49 @@ elif chart_type == "Pie":
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pie chart: {e}")
 
-# ===== XUẤT FILE ĐẸP, TẢI VỀ (TÔ MÀU HỆ THỐNG CHA-CON) =====
-st.subheader("4. Tải file kết quả định dạng màu nhóm")
+# ===== XUẤT FILE ĐẸP, TẢI VỀ (TÔ MÀU F1 CÙNG CHA) =====
+st.subheader("4. Tải file kết quả định dạng màu nhóm F1")
 
 output_file = 'sales_report_dep.xlsx'
 df.to_excel(output_file, index=False)
 
-# --- Xác định từng cây hệ thống cho tô màu ---
-# Mỗi "root" (không có parent) và toàn bộ cây con sẽ cùng màu
-def get_full_tree(code, parent_map, visited=None):
-    if visited is None:
-        visited = set()
-    visited.add(code)
-    for child in parent_map.get(str(code), []):
-        if child not in visited:
-            get_full_tree(child, parent_map, visited)
-    return visited
-
-all_codes = df['Mã khách hàng'].astype(str).tolist()
-root_codes = df[df['parent_id'].isna()]['Mã khách hàng'].astype(str).tolist()
-
-group_dict = {}  # code → group_id
-group_list = []  # list các set group (mỗi group 1 màu)
-for idx, root in enumerate(root_codes):
-    group = get_full_tree(root, parent_map)
-    group_list.append(group)
-    for code in group:
-        group_dict[code] = idx
-
-for code in all_codes:
-    if code not in group_dict:
-        idx = len(group_list)
-        group_list.append({code})
-        group_dict[code] = idx
-
-# --- Tô màu các cây hệ thống ---
+# Tô màu pastel, chỉ cha (có cấp dưới trực tiếp) và F1 cùng màu; các nhóm khác màu khác nhau
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
-import colorsys
+import random
 
 wb = load_workbook(output_file)
 ws = wb.active
 
-def get_color(idx, total):
-    h = (idx * 0.97) / total
-    r, g, b = colorsys.hsv_to_rgb(h, 0.45, 1)
+col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
+col_parent = [cell.value for cell in ws[1]].index('parent_id')+1
+
+# Tìm tất cả các mã cha (có ít nhất 1 con trực tiếp)
+ma_cha_list = df[df['Mã khách hàng'].isin(df['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
+
+def pastel_color(seed_val):
+    random.seed(seed_val)
+    h = random.random()
+    s = 0.30 + random.random()*0.10  # saturation thấp
+    v = 0.97
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
     return "%02X%02X%02X" % (int(r*255), int(g*255), int(b*255))
 
-group_color = {idx: PatternFill(start_color=get_color(idx, len(group_list)),
-                               end_color=get_color(idx, len(group_list)),
-                               fill_type='solid')
-               for idx in range(len(group_list))}
+ma_cha_to_color = {ma_cha: PatternFill(start_color=pastel_color(ma_cha), end_color=pastel_color(ma_cha), fill_type='solid') for ma_cha in ma_cha_list}
 
-col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
+# Tô màu cho chính cha và các con F1 của nó
+for row in range(2, ws.max_row + 1):
+    ma_kh = str(ws.cell(row=row, column=col_makh).value)
+    parent_id = ws.cell(row=row, column=col_parent).value
+    # Tô nếu là cha, hoặc là con F1 của cha nào đó
+    if ma_kh in ma_cha_to_color:
+        fill = ma_cha_to_color[ma_kh]
+    elif parent_id in ma_cha_to_color:
+        fill = ma_cha_to_color[parent_id]
+    else:
+        fill = PatternFill(fill_type=None)
+    for col in range(1, ws.max_column + 1):
+        ws.cell(row=row, column=col).fill = fill
 
 # Header màu vàng như cũ
 header_fill = PatternFill(start_color='FFE699', end_color='FFE699', fill_type='solid')
@@ -272,14 +256,6 @@ for col in range(1, ws.max_column + 1):
     cell.font = header_font
     cell.alignment = header_align
 
-for row in range(2, ws.max_row + 1):
-    code = str(ws.cell(row=row, column=col_makh).value)
-    group_idx = group_dict.get(code, 0)
-    fill = group_color[group_idx]
-    for col in range(1, ws.max_column + 1):
-        ws.cell(row=row, column=col).fill = fill
-
-# (Có thể thêm định dạng căn lề, số tiền, v.v. như cũ nếu muốn)
 bio = BytesIO()
 wb.save(bio)
 st.download_button(
