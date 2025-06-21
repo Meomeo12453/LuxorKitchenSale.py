@@ -12,7 +12,7 @@ from openpyxl.styles import PatternFill, Alignment, Font
 import random
 import base64
 
-# ===== CSS responsive, tối ưu cho mobile =====
+# ===== CSS responsive =====
 st.markdown("""
     <style>
     .block-container {padding-top:0.7rem; max-width:100vw !important;}
@@ -28,7 +28,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ===== Logo căn giữa tuyệt đối, cách hotline 5px =====
+# ===== Logo căn giữa =====
 LOGO_PATHS = [
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png",
@@ -36,11 +36,9 @@ LOGO_PATHS = [
     "002f43d6-a413-41d0-b88a-cde6a1a1a98c.png"
 ]
 logo = None
-logo_path_actual = None
 for path in LOGO_PATHS:
     if os.path.exists(path):
         logo = Image.open(path)
-        logo_path_actual = path
         break
 
 if logo is not None:
@@ -64,17 +62,15 @@ if logo is not None:
 else:
     st.warning("Không tìm thấy file logo. Đảm bảo file logo đã upload đúng thư mục app!")
 
-# Hotline (ngay dưới logo, cách 5px)
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
     unsafe_allow_html=True)
 st.markdown(
     "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
     unsafe_allow_html=True)
-
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-# ======= GIAO DIỆN: TIÊU ĐỀ PHÂN TÍCH + CONTROL =======
+# ====== CONTROL ======
 st.markdown("### 🔎 Tùy chọn phân tích")
 col1, col2 = st.columns([2, 1])
 with col1:
@@ -102,22 +98,36 @@ if not uploaded_file:
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-# ===== XỬ LÝ DỮ LIỆU: ĐẢM BẢO KHÔNG PHỤ THUỘC THỨ TỰ =====
+# ===== XỬ LÝ DỮ LIỆU, CHUẨN HÓA TỔNG QUÁT =====
 df = pd.read_excel(uploaded_file)
-df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
-df['Ghi chú'] = df['Ghi chú'].astype(str)
 
-# Tạo set/list tất cả mã khách hàng để dò tìm parent_id ở bất kỳ dòng nào
+# Chuẩn hóa mã khách hàng, ghi chú về chuỗi, bỏ khoảng trắng, NaN
+df['Mã khách hàng'] = df['Mã khách hàng'].astype(str).str.strip()
+df['Ghi chú'] = df['Ghi chú'].astype(str).str.strip()
+df['Ghi chú'] = df['Ghi chú'].replace({'None': None, 'nan': None, 'NaN': None, '': None})
+
+# Xử lý cột Tổng bán trừ trả hàng sang số
+df['Tổng bán trừ trả hàng'] = pd.to_numeric(df['Tổng bán trừ trả hàng'], errors='coerce').fillna(0)
+
+# Tạo set/list tất cả mã khách hàng
 all_codes = set(df['Mã khách hàng'])
-# Nếu "Ghi chú" đúng là 1 mã khách hàng khác thì lấy làm parent_id, ngược lại None
-df['parent_id'] = df['Ghi chú'].apply(lambda x: x if x in all_codes and x != '' else None)
 
-# Xây dựng parent_map cho tất cả trường hợp (không phụ thuộc vị trí cha/con)
+# parent_id chỉ là mã khách hàng khác và hợp lệ
+def get_parent_id(x):
+    if pd.isnull(x) or x is None:
+        return None
+    x = str(x).strip()
+    if x in all_codes:
+        return x
+    return None
+df['parent_id'] = df['Ghi chú'].apply(get_parent_id)
+
+# Xây parent_map
 parent_map = {}
 for idx, row in df.iterrows():
     pid = row['parent_id']
     code = row['Mã khách hàng']
-    if pd.notnull(pid):
+    if pd.notnull(pid) and pid is not None:
         parent_map.setdefault(str(pid), []).append(str(code))
 
 def get_all_descendants(code, parent_map):
@@ -135,7 +145,7 @@ for idx, row in df.iterrows():
     descendants = get_all_descendants(code, parent_map)
     desc_counts.append(len(descendants))
     if descendants:
-        doanhso = df[df['Mã khách hàng'].astype(str).isin(descendants)]['Tổng bán trừ trả hàng'].sum()
+        doanhso = df[df['Mã khách hàng'].isin(descendants)]['Tổng bán trừ trả hàng'].sum()
     else:
         doanhso = 0
     ds_he_thong.append(doanhso)
