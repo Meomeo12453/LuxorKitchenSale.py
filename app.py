@@ -24,7 +24,7 @@ st.markdown("""
 LOGO_PATHS = [
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png",
-    "30313609-d84b-45c1-958e-7d50bf11b60c.png",  # Thử thêm nếu bạn up file mới
+    "30313609-d84b-45c1-958e-7d50bf11b60c.png",
     "002f43d6-a413-41d0-b88a-cde6a1a1a98c.png"
 ]
 logo = None
@@ -74,7 +74,7 @@ if not uploaded_file:
     with st.expander("📋 Xem hướng dẫn & file mẫu", expanded=False):
         st.markdown(
             "- Nhấn **Browse files** hoặc kéo thả file.\n"
-            "- File cần các cột: **Mã khách hàng, Tên khách hàng, Nhóm khách hàng, Tổng bán trừ trả hàng**.\n"
+            "- File cần các cột: **Mã khách hàng, Tên khách hàng, Nhóm khách hàng, Tổng bán trừ trả hàng, Ghi chú**.\n"
             "- Nếu lỗi, kiểm tra lại tiêu đề cột trong file Excel."
         )
     st.stop()
@@ -83,41 +83,32 @@ if not uploaded_file:
 df = pd.read_excel(uploaded_file)
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
 
-# "Cấp dưới"
-cap_duoi_list = []
+# ---- Xác định parent-child logic mới (cấp trên dựa vào Ghi chú) ----
+parent_ids = []
+prev_ma_khach_hang = set()
 for idx, row in df.iterrows():
-    ma_kh = row['Mã khách hàng']
-    ten_cap_tren, max_len = "", 0
-    for idx2, row2 in df.iterrows():
-        if idx == idx2: continue
-        ma_cap_tren = row2['Mã khách hàng']
-        if ma_cap_tren != ma_kh and ma_cap_tren in ma_kh:
-            if len(ma_cap_tren) > max_len:
-                ten_cap_tren = row2['Tên khách hàng']
-                max_len = len(ma_cap_tren)
-    cap_duoi_list.append(f"Cấp dưới {ten_cap_tren}" if ten_cap_tren else "")
-df['Cấp dưới'] = cap_duoi_list
+    parent_id = None
+    if pd.notnull(row['Ghi chú']) and row['Ghi chú'] in prev_ma_khach_hang:
+        parent_id = row['Ghi chú']
+    parent_ids.append(parent_id)
+    prev_ma_khach_hang.add(row['Mã khách hàng'])
+df['parent_id'] = parent_ids
 
-# "Số thuộc cấp"
-so_thuoc_cap = []
-for idx, row in df.iterrows():
-    ma_kh = row['Mã khách hàng']
-    count = sum((other_ma != ma_kh and other_ma.startswith(ma_kh)) for other_ma in df['Mã khách hàng'])
-    so_thuoc_cap.append(count)
-df['Số thuộc cấp'] = so_thuoc_cap
+# ---- Số thuộc cấp trực tiếp (F1) ----
+f1_counts = []
+for ma_kh in df['Mã khách hàng']:
+    f1_count = (df['parent_id'] == ma_kh).sum()
+    f1_counts.append(f1_count)
+df['Số thuộc cấp F1'] = f1_counts
 
-# "Doanh số hệ thống"
-def tinh_doanh_so_he_thong(df_in):
-    dsht = []
-    for idx, row in df_in.iterrows():
-        ma_kh = row['Mã khách hàng']
-        mask = (df_in['Mã khách hàng'] != ma_kh) & (df_in['Mã khách hàng'].str.startswith(ma_kh))
-        subtotal = df_in.loc[mask, 'Tổng bán trừ trả hàng'].sum()
-        dsht.append(subtotal)
-    return dsht
-df['Doanh số hệ thống'] = tinh_doanh_so_he_thong(df)
+# ---- Tổng doanh số F1 (tổng doanh số của các cấp dưới trực tiếp) ----
+ds_f1 = []
+for ma_kh in df['Mã khách hàng']:
+    subtotal = df.loc[df['parent_id'] == ma_kh, 'Tổng bán trừ trả hàng'].sum()
+    ds_f1.append(subtotal)
+df['Doanh số F1'] = ds_f1
 
-# Hoa hồng
+# ---- Cấu trúc hoa hồng (tùy chỉnh theo từng nhóm) ----
 network = {
     'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
     'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
@@ -125,9 +116,9 @@ network = {
 }
 df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('comm_rate', 0))
 df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
-df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
+df['override_comm'] = df['Doanh số F1'] * df['override_rate']
 
-# Filter theo nhóm
+# ---- Filter nhóm ----
 if filter_nganh:
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
 
@@ -135,10 +126,10 @@ if filter_nganh:
 with st.expander("📋 Giải thích các trường dữ liệu", expanded=False):
     st.markdown("""
     **Các trường dữ liệu chính:**  
-    - `Cấp dưới`: Khách hàng thuộc hệ thống trực tiếp dưới khách hàng này.
-    - `Số thuộc cấp`: Tổng số thành viên trong nhánh hệ thống.
-    - `Doanh số hệ thống`: Tổng doanh số của tất cả cấp dưới thuộc nhánh này.
-    - `override_comm`: Hoa hồng từ hệ thống cấp dưới (áp dụng tỷ lệ từng nhóm).
+    - `parent_id`: Mã khách hàng cấp trên trực tiếp (nếu có).
+    - `Số thuộc cấp F1`: Số thành viên trực tiếp dưới nhánh này.
+    - `Doanh số F1`: Tổng doanh số của các cấp dưới trực tiếp.
+    - `override_comm`: Hoa hồng từ hệ thống cấp dưới F1 (áp dụng tỷ lệ từng nhóm).
     """)
 
 st.subheader("2. Bảng dữ liệu đại lý đã xử lý")
