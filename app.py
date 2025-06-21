@@ -48,7 +48,6 @@ if logo is not None:
     w, h = logo.size
     new_width = int((w / h) * desired_height)
     logo_resized = logo.resize((new_width, desired_height))
-    # Encode image to base64 for perfect compatibility with Streamlit HTML
     buffered = BytesIO()
     logo_resized.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
@@ -103,27 +102,23 @@ if not uploaded_file:
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-# ===== XỬ LÝ DỮ LIỆU =====
+# ===== XỬ LÝ DỮ LIỆU: ĐẢM BẢO KHÔNG PHỤ THUỘC THỨ TỰ =====
 df = pd.read_excel(uploaded_file)
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
+df['Ghi chú'] = df['Ghi chú'].astype(str)
 
-# ---- Xác định parent_id (theo Ghi chú) ----
-parent_ids = []
-prev_ma_khach_hang = set()
-for idx, row in df.iterrows():
-    parent_id = None
-    if pd.notnull(row['Ghi chú']) and row['Ghi chú'] in prev_ma_khach_hang:
-        parent_id = row['Ghi chú']
-    parent_ids.append(parent_id)
-    prev_ma_khach_hang.add(row['Mã khách hàng'])
-df['parent_id'] = parent_ids
+# Tạo set/list tất cả mã khách hàng để dò tìm parent_id ở bất kỳ dòng nào
+all_codes = set(df['Mã khách hàng'])
+# Nếu "Ghi chú" đúng là 1 mã khách hàng khác thì lấy làm parent_id, ngược lại None
+df['parent_id'] = df['Ghi chú'].apply(lambda x: x if x in all_codes and x != '' else None)
 
-# ---- Xây dựng parent_map để phân tầng đa cấp ----
+# Xây dựng parent_map cho tất cả trường hợp (không phụ thuộc vị trí cha/con)
 parent_map = {}
 for idx, row in df.iterrows():
     pid = row['parent_id']
+    code = row['Mã khách hàng']
     if pd.notnull(pid):
-        parent_map.setdefault(str(pid), []).append(str(row['Mã khách hàng']))
+        parent_map.setdefault(str(pid), []).append(str(code))
 
 def get_all_descendants(code, parent_map):
     result = []
@@ -286,8 +281,7 @@ downloaded = st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 if downloaded:
-    st.toast("Đã tải xuống!", icon="✅")
-
+    st.toast("✅ Đã tải xuống!", icon="✅")
 
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
