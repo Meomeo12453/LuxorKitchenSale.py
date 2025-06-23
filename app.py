@@ -10,7 +10,7 @@ from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
 
-# ===== Cấu hình giao diện =====
+# ====== 1. Cấu hình giao diện & logo ======
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 st.markdown("""
     <style>
@@ -20,18 +20,14 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ==== Hiển thị logo căn giữa ====
-LOGO_PATHS = [
-    "logo-daba.png",
-]
+LOGO_PATHS = ["logo-daba.png"]
 logo = None
 for path in LOGO_PATHS:
     if os.path.exists(path):
         logo = Image.open(path)
         break
-
 if logo is not None:
-    desired_height = 36
+    desired_height = 34
     w, h = logo.size
     new_width = int((w / h) * desired_height)
     logo_resized = logo.resize((new_width, desired_height))
@@ -39,7 +35,6 @@ if logo is not None:
     st.image(logo_resized)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ===== HOTLINE & ĐỊA CHỈ =====
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
     unsafe_allow_html=True)
@@ -48,14 +43,12 @@ st.markdown(
     unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ===== TIÊU ĐỀ =====
+# ====== 2. Control phía trên ===========
 st.title("Sales Dashboard MiniApp")
 st.markdown(
-    "<small style='color:gray;'>Dashboard phân tích & quản trị đại lý cho DABA Sài Gòn. Tải file Excel, lọc – tra cứu – trực quan – tải báo cáo màu nhóm.</small>",
+    "<small style='color:gray;'>Dashboard phân tích & quản trị đại lý cho DABA Sài Gòn. Hỗ trợ nhập nhiều file – phân tích – tải báo cáo.</small>",
     unsafe_allow_html=True)
 
-# ======= CÁC CONTROL PHÂN TÍCH TRÊN MAIN PAGE =======
-st.markdown("## 🔎 Tùy chọn phân tích")
 col1, col2 = st.columns(2)
 with col1:
     chart_type = st.radio("Chọn biểu đồ:", ["Cột chồng", "Sunburst", "Pareto", "Pie"], horizontal=True)
@@ -70,75 +63,70 @@ uploaded_files = st.file_uploader(
 )
 if not uploaded_files or len(uploaded_files) == 0:
     st.info("💡 Hãy upload từ 1 đến 10 file Excel để bắt đầu.")
-    with st.expander("📋 Xem hướng dẫn & file mẫu", expanded=False):
-        st.markdown(
-            "- Nhấn **Browse files** hoặc kéo thả file.\n"
-            "- Các file cần cùng cấu trúc cột: **Mã khách hàng, Tên khách hàng, Nhóm khách hàng, Tổng bán trừ trả hàng**.\n"
-            "- Nếu lỗi, kiểm tra lại tiêu đề cột trong file Excel."
-        )
     st.stop()
 if len(uploaded_files) > 10:
     st.warning("Vui lòng chỉ upload tối đa 10 file.")
     st.stop()
 
-# ===== XỬ LÝ DỮ LIỆU (TỔNG HỢP TẤT CẢ FILE) =====
+# ====== 3. Đọc dữ liệu tổng hợp =======
 dfs = []
 for file in uploaded_files:
     try:
         df_i = pd.read_excel(file)
-        df_i["Nguồn file"] = file.name  # Gắn nhãn file nguồn
+        df_i["Nguồn file"] = file.name
         dfs.append(df_i)
     except Exception as e:
         st.error(f"Lỗi khi đọc file {file.name}: {e}")
         st.stop()
-
-# Kiểm tra các cột giống nhau chưa
 col_headers = [tuple(df.columns) for df in dfs]
 if not all(c == col_headers[0] for c in col_headers):
     st.error("Các file có cấu trúc cột khác nhau! Hãy kiểm tra lại tên cột ở tất cả file.")
     st.write("Tên cột từng file:", col_headers)
     st.stop()
-
 df = pd.concat(dfs, ignore_index=True)
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
 
-# --- XỬ LÝ CỘT HỆ THỐNG ---
-# "Cấp dưới"
-cap_duoi_list = []
-for idx, row in df.iterrows():
-    ma_kh = row['Mã khách hàng']
-    ten_cap_tren, max_len = "", 0
-    for idx2, row2 in df.iterrows():
-        if idx == idx2: continue
-        ma_cap_tren = row2['Mã khách hàng']
-        if ma_cap_tren != ma_kh and ma_cap_tren in ma_kh:
-            if len(ma_cap_tren) > max_len:
-                ten_cap_tren = row2['Tên khách hàng']
-                max_len = len(ma_cap_tren)
-    cap_duoi_list.append(f"Cấp dưới {ten_cap_tren}" if ten_cap_tren else "")
-df['Cấp dưới'] = cap_duoi_list
-
-# "Số thuộc cấp"
-so_thuoc_cap = []
-for idx, row in df.iterrows():
-    ma_kh = row['Mã khách hàng']
-    count = sum((other_ma != ma_kh and other_ma.startswith(ma_kh)) for other_ma in df['Mã khách hàng'])
-    so_thuoc_cap.append(count)
-df['Số thuộc cấp'] = so_thuoc_cap
-
-# ======= SỬA CHUẨN DOANH SỐ HỆ THỐNG VÀ OVERRIDE =======
-def tinh_doanh_so_he_thong(df_in):
-    dsht = []
-    for idx, row in df_in.iterrows():
+# ====== 4. Tính cấp dưới (theo GHI CHÚ/CẤU TRÚC HỆ THỐNG) ======
+# 1. "Cấp dưới" - xác định khách hàng cha theo mã
+def tim_cap_duoi(df):
+    cap_duoi = []
+    for idx, row in df.iterrows():
         ma_kh = row['Mã khách hàng']
-        # Lấy doanh số TẤT CẢ các mã KH mà mã KH đó là PREFIX (trừ bản thân)
-        mask = (df_in['Mã khách hàng'].apply(lambda x: x.startswith(ma_kh)) & (df_in['Mã khách hàng'] != ma_kh))
-        subtotal = df_in.loc[mask, 'Tổng bán trừ trả hàng'].sum()
+        captren = None
+        maxlen = 0
+        for idx2, row2 in df.iterrows():
+            ma2 = row2['Mã khách hàng']
+            if ma2 == ma_kh: continue
+            # LÀ CẤP TRÊN KHI mã KH NÀY nằm trong mã KH khách khác, ĐỒNG THỜI số ký tự phải lớn hơn (ưu tiên mã dài nhất)
+            if ma2 in ma_kh and len(ma2) > maxlen:
+                captren = row2['Tên khách hàng']
+                maxlen = len(ma2)
+        cap_duoi.append(f"Cấp dưới {captren}" if captren else "")
+    return cap_duoi
+df["Cấp dưới"] = tim_cap_duoi(df)
+
+# 2. "Số thuộc cấp": đếm tất cả KH bắt đầu = mã KH (trừ bản thân)
+def so_thuoc_cap(df):
+    rs = []
+    for idx, row in df.iterrows():
+        ma_kh = row['Mã khách hàng']
+        count = (df['Mã khách hàng'].apply(lambda x: x.startswith(ma_kh)) & (df['Mã khách hàng'] != ma_kh)).sum()
+        rs.append(count)
+    return rs
+df['Số thuộc cấp'] = so_thuoc_cap(df)
+
+# 3. "Doanh số hệ thống": cộng tất cả doanh số các KH có mã bắt đầu = mã KH (trừ chính mình!)
+def doanh_so_he_thong(df):
+    dsht = []
+    for idx, row in df.iterrows():
+        ma_kh = row['Mã khách hàng']
+        mask = (df['Mã khách hàng'].apply(lambda x: x.startswith(ma_kh)) & (df['Mã khách hàng'] != ma_kh))
+        subtotal = df.loc[mask, 'Tổng bán trừ trả hàng'].sum()
         dsht.append(subtotal)
     return dsht
+df['Doanh số hệ thống'] = doanh_so_he_thong(df)
 
-df['Doanh số hệ thống'] = tinh_doanh_so_he_thong(df)
-
+# 4. Chỉ số hoa hồng (tùy nhóm)
 network = {
     'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
     'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
@@ -148,11 +136,11 @@ df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).
 df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
 df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 
-# =========== Lọc theo nhóm nếu cần ===========
+# ====== 5. Lọc nếu có ======
 if filter_nganh:
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
 
-# ===== BẢNG DỮ LIỆU & GIẢI THÍCH =====
+# ====== 6. Hiển thị dữ liệu ======
 with st.expander("📋 Giải thích các trường dữ liệu", expanded=False):
     st.markdown("""
     **Các trường dữ liệu chính:**  
@@ -166,9 +154,8 @@ with st.expander("📋 Giải thích các trường dữ liệu", expanded=False
 st.subheader("2. Bảng dữ liệu tổng hợp đã xử lý")
 st.dataframe(df, use_container_width=True, hide_index=True)
 
-# ===== BIỂU ĐỒ PHÂN TÍCH =====
+# ====== 7. Biểu đồ trực quan ======
 st.subheader("3. Biểu đồ phân tích dữ liệu")
-
 if chart_type == "Cột chồng":
     fig, ax = plt.subplots(figsize=(12,5))
     ind = np.arange(len(df))
@@ -180,7 +167,6 @@ if chart_type == "Cột chồng":
     ax.set_xticklabels(df['Tên khách hàng'], rotation=60, ha='right')
     ax.legend()
     st.pyplot(fig)
-
 elif chart_type == "Sunburst":
     try:
         fig2 = px.sunburst(
@@ -192,7 +178,6 @@ elif chart_type == "Sunburst":
         st.plotly_chart(fig2, use_container_width=True)
     except Exception as e:
         st.error(f"Lỗi khi vẽ Sunburst chart: {e}")
-
 elif chart_type == "Pareto":
     try:
         df_sorted = df.sort_values('Tổng bán trừ trả hàng', ascending=False)
@@ -211,7 +196,6 @@ elif chart_type == "Pareto":
         st.pyplot(fig3)
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pareto chart: {e}")
-
 elif chart_type == "Pie":
     try:
         fig4, ax4 = plt.subplots(figsize=(6,6))
@@ -222,15 +206,12 @@ elif chart_type == "Pie":
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pie chart: {e}")
 
-# ===== XUẤT FILE ĐẸP, TẢI VỀ =====
+# ====== 8. Xuất file Excel đẹp ======
 st.subheader("4. Tải file tổng hợp định dạng màu nhóm")
-
 output_file = 'sales_report_dep.xlsx'
 df.to_excel(output_file, index=False)
-
 wb = load_workbook(output_file)
 ws = wb.active
-
 header_fill = PatternFill(start_color='FFE699', end_color='FFE699', fill_type='solid')
 header_font = Font(bold=True, color='000000')
 header_align = Alignment(horizontal='center', vertical='center')
