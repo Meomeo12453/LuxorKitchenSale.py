@@ -23,9 +23,6 @@ st.markdown("""
 # ==== Hiển thị logo căn giữa ====
 LOGO_PATHS = [
     "logo-daba.png",
-    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png",
-    "30313609-d84b-45c1-958e-7d50bf11b60c.png",
-    "002f43d6-a413-41d0-b88a-cde6a1a1a98c.png"
 ]
 logo = None
 for path in LOGO_PATHS:
@@ -95,7 +92,7 @@ for file in uploaded_files:
         st.error(f"Lỗi khi đọc file {file.name}: {e}")
         st.stop()
 
-# Kiểm tra các cột giống nhau?
+# Kiểm tra các cột giống nhau chưa
 col_headers = [tuple(df.columns) for df in dfs]
 if not all(c == col_headers[0] for c in col_headers):
     st.error("Các file có cấu trúc cột khác nhau! Hãy kiểm tra lại tên cột ở tất cả file.")
@@ -105,6 +102,7 @@ if not all(c == col_headers[0] for c in col_headers):
 df = pd.concat(dfs, ignore_index=True)
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str)
 
+# --- XỬ LÝ CỘT HỆ THỐNG ---
 # "Cấp dưới"
 cap_duoi_list = []
 for idx, row in df.iterrows():
@@ -128,18 +126,19 @@ for idx, row in df.iterrows():
     so_thuoc_cap.append(count)
 df['Số thuộc cấp'] = so_thuoc_cap
 
-# "Doanh số hệ thống"
+# ======= SỬA CHUẨN DOANH SỐ HỆ THỐNG VÀ OVERRIDE =======
 def tinh_doanh_so_he_thong(df_in):
     dsht = []
     for idx, row in df_in.iterrows():
         ma_kh = row['Mã khách hàng']
-        mask = (df_in['Mã khách hàng'] != ma_kh) & (df_in['Mã khách hàng'].str.startswith(ma_kh))
+        # Lấy doanh số TẤT CẢ các mã KH mà mã KH đó là PREFIX (trừ bản thân)
+        mask = (df_in['Mã khách hàng'].apply(lambda x: x.startswith(ma_kh)) & (df_in['Mã khách hàng'] != ma_kh))
         subtotal = df_in.loc[mask, 'Tổng bán trừ trả hàng'].sum()
         dsht.append(subtotal)
     return dsht
+
 df['Doanh số hệ thống'] = tinh_doanh_so_he_thong(df)
 
-# Hoa hồng
 network = {
     'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
     'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
@@ -149,7 +148,7 @@ df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).
 df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
 df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 
-# Filter theo nhóm
+# =========== Lọc theo nhóm nếu cần ===========
 if filter_nganh:
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
 
