@@ -1,45 +1,67 @@
 import streamlit as st
 from PIL import Image
+import os
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import plotly.express as px
+import colorsys
 from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
-import colorsys
-import os
 import random
+import base64
 
-# ======= CSS ĐƠN GIẢN ĐẢM BẢO HIỂN THỊ =======
+# ========== LOGO & GIAO DIỆN =============
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 st.markdown("""
     <style>
-        .block-container {padding-top:0.9rem;}
-        .stApp {background: #F7F8FA;}
-        img {border-radius:0 !important;}
+    .block-container {padding-top:0.7rem; max-width:100vw !important;}
+    .stApp {background: #F7F8FA;}
+    img { border-radius: 0 !important; }
+    h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
     </style>
 """, unsafe_allow_html=True)
 
-# ======= HIỂN THỊ LOGO, ĐẢM BẢO LUÔN CÓ FILE LOGO =======
-logo_path = "logo-daba.png"  # Đổi tên file logo đúng
-if os.path.exists(logo_path):
-    img = Image.open(logo_path)
-    desired_height = 38  # pixels, sửa nhỏ/lớn tại đây
-    w, h = img.size
+LOGO_PATHS = [
+    "logo-daba.png",
+    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
+]
+logo = None
+for path in LOGO_PATHS:
+    if os.path.exists(path):
+        logo = Image.open(path)
+        break
+
+if logo is not None:
+    desired_height = 36
+    w, h = logo.size
     new_width = int((w / h) * desired_height)
-    img = img.resize((new_width, desired_height))
-    st.markdown("<div style='display:flex;justify-content:center;'><img src='data:image/png;base64," +
-        BytesIO(img.tobytes()).getvalue().hex() + "' width='" + str(new_width) +
-        "' height='" + str(desired_height) + "'/></div>", unsafe_allow_html=True)
-    st.image(img)
-else:
-    st.warning("❗️Không tìm thấy file logo-daba.png. Hãy upload file logo này vào thư mục cùng file app!")
+    logo_resized = logo.resize((new_width, desired_height))
+    buffered = BytesIO()
+    logo_resized.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    st.markdown(
+        f"""
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding-top:4px;padding-bottom:0;">
+            <img src="data:image/png;base64,{img_str}" 
+                 width="{new_width}" height="{desired_height}" style="display:block;margin:auto;" />
+            <div style="height:5px;"></div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-st.markdown("<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>", unsafe_allow_html=True)
-st.markdown("<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>", unsafe_allow_html=True)
-st.markdown("<hr style='margin:8px 0 18px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
+    unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
+    unsafe_allow_html=True)
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-# ======= CONTROL: BIỂU ĐỒ, LỌC NHÓM =======
-st.markdown("### Tùy chọn phân tích")
+# ========== CONTROL ==========
+st.markdown("### 🔎 Tùy chọn phân tích")
 col1, col2 = st.columns([2, 1])
 with col1:
     chart_type = st.radio(
@@ -50,70 +72,70 @@ with col1:
 with col2:
     filter_nganh = st.multiselect("Lọc theo nhóm khách hàng:", ["Catalyst", "Visionary", "Trailblazer"], default=[])
 
-st.markdown("<hr style='margin:10px 0 18px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-# ======= UPLOAD NHIỀU FILE EXCEL =======
-st.markdown("### 1. Tải lên (tối đa 10) file Excel (.xlsx)")
-uploaded_files = st.file_uploader("Chọn nhiều file cùng lúc (hoặc kéo thả)", type="xlsx", accept_multiple_files=True)
+# ======= MULTI FILE UPLOAD =======
+st.markdown("### 1. Tải lên tối đa 10 file Excel (.xlsx)")
+uploaded_files = st.file_uploader(
+    "**Chọn nhiều file hoặc kéo thả nhiều file Excel**",
+    type="xlsx",
+    accept_multiple_files=True,
+    help="Chỉ nhận Excel, <200MB mỗi file. Các file phải cùng cấu trúc cột."
+)
 if not uploaded_files:
-    st.info("💡 Vui lòng upload file Excel mẫu (có cột: Mã khách hàng, Tên khách hàng, Nhóm khách hàng, Tổng bán trừ trả hàng, Ghi chú)")
+    st.info("💡 Hãy upload 1 hoặc nhiều file Excel mẫu để bắt đầu sử dụng Dashboard.")
+    with st.expander("📋 Xem hướng dẫn & file mẫu", expanded=False):
+        st.markdown(
+            "- Chọn hoặc kéo thả **1–10 file Excel**.\n"
+            "- File cần các cột: **Mã khách hàng, Tên khách hàng, Nhóm khách hàng, Tổng bán trừ trả hàng, Ghi chú**.\n"
+            "- Nếu lỗi, kiểm tra lại tiêu đề cột trong file Excel."
+        )
     st.stop()
 
-if len(uploaded_files) > 10:
-    st.warning("Chỉ upload tối đa 10 file!")
-    st.stop()
-
-# ======= ĐỌC & GHÉP FILE =======
+# ===== GỘP & LÀM SẠCH DỮ LIỆU =====
 dfs = []
-for file in uploaded_files:
-    try:
-        df = pd.read_excel(file)
-        # Chuẩn hóa cột
-        df.columns = [str(col).strip() for col in df.columns]
-        # Bắt buộc phải có các cột sau
-        required_cols = ['Mã khách hàng', 'Tên khách hàng', 'Nhóm khách hàng', 'Tổng bán trừ trả hàng', 'Ghi chú']
-        for col in required_cols:
-            if col not in df.columns:
-                st.error(f"File {file.name} thiếu cột bắt buộc: {col}")
-                st.stop()
-        dfs.append(df)
-    except Exception as e:
-        st.error(f"File {file.name} không đọc được: {e}")
-        st.stop()
-
+for f in uploaded_files[:10]:
+    dft = pd.read_excel(f)
+    dfs.append(dft)
 df = pd.concat(dfs, ignore_index=True)
-df['Mã khách hàng'] = df['Mã khách hàng'].astype(str).str.strip()
-df['Ghi chú'] = df['Ghi chú'].astype(str).str.strip().replace({'None': None, 'nan': None, 'NaN': None, '': None})
-df['Tổng bán trừ trả hàng'] = pd.to_numeric(df['Tổng bán trừ trả hàng'], errors='coerce').fillna(0)
 
-# ======= XÁC ĐỊNH QUAN HỆ HỆ THỐNG THEO "GHI CHÚ" =======
+# Chuẩn hóa
+df['Mã khách hàng'] = df['Mã khách hàng'].astype(str).str.strip()
+df['Ghi chú'] = df['Ghi chú'].astype(str).str.strip()
+df['Ghi chú'] = df['Ghi chú'].replace({'None': None, 'nan': None, 'NaN': None, '': None})
+df['Tổng bán trừ trả hàng'] = pd.to_numeric(df['Tổng bán trừ trả hàng'], errors='coerce').fillna(0)
+df = df.drop_duplicates(subset=['Mã khách hàng'], keep='first')  # Loại trùng mã khách hàng nếu có
+
 all_codes = set(df['Mã khách hàng'])
+
 def get_parent_id(x):
-    if pd.isnull(x) or x is None: return None
+    if pd.isnull(x) or x is None:
+        return None
     x = str(x).strip()
     return x if x in all_codes else None
 df['parent_id'] = df['Ghi chú'].apply(get_parent_id)
 
-# Xây parent_map cho hệ thống đa tầng
+# Xây parent_map (cha: [con])
 parent_map = {}
 for idx, row in df.iterrows():
     pid = row['parent_id']
     code = row['Mã khách hàng']
     if pd.notnull(pid) and pid is not None:
-        parent_map.setdefault(str(pid), []).append(str(code))
+        parent_map.setdefault(pid, []).append(code)
 
+# Đệ quy lấy tất cả thuộc cấp
 def get_all_descendants(code, parent_map):
     result = []
-    direct = parent_map.get(str(code), [])
-    result.extend(direct)
-    for child in direct:
+    children = parent_map.get(code, [])
+    result.extend(children)
+    for child in children:
         result.extend(get_all_descendants(child, parent_map))
     return result
 
 desc_counts = []
 ds_he_thong = []
 for idx, row in df.iterrows():
-    code = str(row['Mã khách hàng'])
+    code = row['Mã khách hàng']
     descendants = get_all_descendants(code, parent_map)
     desc_counts.append(len(descendants))
     doanhso = df[df['Mã khách hàng'].isin(descendants)]['Tổng bán trừ trả hàng'].sum() if descendants else 0
@@ -121,7 +143,7 @@ for idx, row in df.iterrows():
 df['Số cấp dưới'] = desc_counts
 df['Doanh số hệ thống'] = ds_he_thong
 
-# ======= HOA HỒNG =======
+# Tính override_comm
 network = {
     'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
     'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
@@ -137,12 +159,7 @@ if filter_nganh:
 st.markdown("### 2. Bảng dữ liệu đại lý đã xử lý")
 st.dataframe(df, use_container_width=True, hide_index=True)
 
-# ======= BIỂU ĐỒ PHÂN TÍCH DỮ LIỆU =======
 st.markdown("### 3. Biểu đồ phân tích dữ liệu")
-import matplotlib.pyplot as plt
-import plotly.express as px
-import numpy as np
-
 if chart_type == "Biểu đồ cột chồng":
     fig, ax = plt.subplots(figsize=(12,5))
     ind = np.arange(len(df))
@@ -154,7 +171,6 @@ if chart_type == "Biểu đồ cột chồng":
     ax.set_xticklabels(df['Tên khách hàng'], rotation=60, ha='right')
     ax.legend()
     st.pyplot(fig)
-
 elif chart_type == "Sơ đồ Sunburst":
     try:
         fig2 = px.sunburst(
@@ -166,7 +182,6 @@ elif chart_type == "Sơ đồ Sunburst":
         st.plotly_chart(fig2, use_container_width=True)
     except Exception as e:
         st.error(f"Lỗi khi vẽ Sunburst chart: {e}")
-
 elif chart_type == "Biểu đồ Pareto":
     try:
         df_sorted = df.sort_values('Tổng bán trừ trả hàng', ascending=False)
@@ -185,7 +200,6 @@ elif chart_type == "Biểu đồ Pareto":
         st.pyplot(fig3)
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pareto chart: {e}")
-
 elif chart_type == "Biểu đồ tròn (Pie)":
     try:
         fig4, ax4 = plt.subplots(figsize=(6,6))
@@ -196,32 +210,25 @@ elif chart_type == "Biểu đồ tròn (Pie)":
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pie chart: {e}")
 
-st.markdown("<hr style='margin:10px 0 18px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
-
-# ======= EXPORT FILE MÀU NHÓM (NẾU CẦN) =======
+st.markdown("### 4. Tải file kết quả định dạng màu nhóm F1")
 output_file = 'sales_report_dep.xlsx'
-df.to_excel(output_file, index=False)
+df_export = df.sort_values(by=['parent_id', 'Mã khách hàng'], ascending=[True, True], na_position='last')
+df_export.to_excel(output_file, index=False)
 
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill, Alignment, Font
-
+# Tô màu pastel, chỉ cha (có cấp dưới trực tiếp) và F1 cùng màu
 wb = load_workbook(output_file)
 ws = wb.active
-
-# Tô màu nhóm theo parent_id (cấp hệ thống)
+col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
+col_parent = [cell.value for cell in ws[1]].index('parent_id')+1
+ma_cha_list = df_export[df_export['Mã khách hàng'].isin(df_export['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
 def pastel_color(seed_val):
     random.seed(str(seed_val))
     h = random.random()
-    s = 0.27 + random.random()*0.09
-    v = 0.96
+    s = 0.28 + random.random()*0.09
+    v = 0.97
     r, g, b = colorsys.hsv_to_rgb(h, s, v)
     return "%02X%02X%02X" % (int(r*255), int(g*255), int(b*255))
-
-col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
-col_parent = [cell.value for cell in ws[1]].index('parent_id')+1
-ma_cha_list = df[df['Mã khách hàng'].isin(df['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
 ma_cha_to_color = {ma_cha: PatternFill(start_color=pastel_color(ma_cha), end_color=pastel_color(ma_cha), fill_type='solid') for ma_cha in ma_cha_list}
-
 for row in range(2, ws.max_row + 1):
     ma_kh = str(ws.cell(row=row, column=col_makh).value)
     parent_id = ws.cell(row=row, column=col_parent).value
@@ -233,7 +240,6 @@ for row in range(2, ws.max_row + 1):
         fill = PatternFill(fill_type=None)
     for col in range(1, ws.max_column + 1):
         ws.cell(row=row, column=col).fill = fill
-
 header_fill = PatternFill(start_color='FFE699', end_color='FFE699', fill_type='solid')
 header_font = Font(bold=True, color='000000')
 header_align = Alignment(horizontal='center', vertical='center')
@@ -242,17 +248,13 @@ for col in range(1, ws.max_column + 1):
     cell.fill = header_fill
     cell.font = header_font
     cell.alignment = header_align
-
 bio = BytesIO()
 wb.save(bio)
-st.download_button(
+downloaded = st.download_button(
     label="📥 Tải file Excel đã định dạng",
     data=bio.getvalue(),
     file_name=output_file,
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-
-# ======= FOOTER =======
-st.markdown("<hr style='margin:10px 0 18px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
-st.markdown("<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>", unsafe_allow_html=True)
-st.markdown("<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>", unsafe_allow_html=True)
+if downloaded:
+    st.toast("✅ Đã tải xuống!", icon="✅")
