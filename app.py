@@ -194,17 +194,36 @@ st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_a
 
 st.markdown("### 3. Biểu đồ phân tích dữ liệu")
 
+import matplotlib.pyplot as plt
+import numpy as np
+
+# --- Chart: Biểu đồ cột chồng ---
 if chart_type == "Biểu đồ cột chồng":
-    fig, ax = plt.subplots(figsize=(12,5))
-    ind = np.arange(len(df))
-    ax.bar(ind, df['Tổng bán trừ trả hàng'], width=0.5, label='Tổng bán cá nhân')
-    ax.bar(ind, df['override_comm'], width=0.5, bottom=df['Tổng bán trừ trả hàng'], label='Hoa hồng hệ thống')
+    n_bars = len(df)
+    fig_width = max(12, n_bars * 0.32)   # Tăng width nếu quá nhiều KH
+
+    fig, ax = plt.subplots(figsize=(fig_width, 5.5))
+    ind = np.arange(n_bars)
+    # Bar chart stacked
+    ax.bar(ind, df['Tổng bán trừ trả hàng'], width=0.6, label='Tổng bán cá nhân')
+    ax.bar(ind, df['override_comm'], width=0.6, bottom=df['Tổng bán trừ trả hàng'], label='Hoa hồng hệ thống')
+
     ax.set_ylabel('Số tiền (VND)')
     ax.set_title('Tổng bán & Hoa hồng hệ thống từng cá nhân')
+
+    # Xoay dọc tên KH, thu nhỏ font
     ax.set_xticks(ind)
-    ax.set_xticklabels(df['Tên khách hàng'], rotation=60, ha='right')
+    ax.set_xticklabels(
+        df['Tên khách hàng'],
+        rotation=90,         # Xoay dọc
+        fontsize=8,          # Font nhỏ, nếu cần nhỏ hơn nữa thì để 6
+        ha='center'
+    )
+
     ax.legend()
+    plt.tight_layout()      # Fit lại layout
     st.pyplot(fig)
+
 
 elif chart_type == "Sơ đồ Sunburst":
     try:
