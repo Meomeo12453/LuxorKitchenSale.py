@@ -1,39 +1,42 @@
-import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import plotly.graph_objects as go
 
-st.set_page_config(page_title="Phân tích phí & doanh thu", layout="wide")
+# Đọc dữ liệu gốc
+file_in = "monthly_report_20250501.xlsx"  # thay bằng file của bạn nếu khác tên
+sheet = "Table 4"
+df = pd.read_excel(file_in, sheet_name=sheet)
 
-st.title("Phân tích các khoản phí trên tổng doanh thu sản phẩm")
+# Danh sách các mục phí muốn phân tích
+fee_items = [
+    'Phí cố định',
+    'Phí thanh toán',
+    'Phí hoa hồng Tiếp thị liên kết',
+    'Phí dịch vụ PiShip'
+]
 
-uploaded_file = st.file_uploader("Tải lên file báo cáo Excel", type=["xlsx"])
+# Lọc và lấy giá trị từng loại phí (dấu âm là chi phí)
+df_fees = df[df['Tổng kết thanh toán đã chuyển'].astype(str).str.contains("Phí", na=False)]
+df_fees = df_fees.set_index('Tổng kết thanh toán đã chuyển')
+fee_values = []
+for item in fee_items:
+    try:
+        val = float(df_fees.loc[item, 'Số tiền (VND)'])
+        fee_values.append(abs(val))
+    except Exception:
+        fee_values.append(0)
 
-if uploaded_file:
-    sheet = "Table 4"
-    df = pd.read_excel(uploaded_file, sheet_name=sheet)
-    st.subheader("Dữ liệu gốc (Table 4)")
-    st.dataframe(df)
+# Lấy tổng doanh thu sản phẩm
+revenue = float(df[df['Tổng kết thanh toán đã chuyển'] == "Tổng tiền sản phẩm"]['Số tiền (VND)'].values[0])
+# Tổng phí
+total_fees = sum(fee_values)
 
-    fee_items = [
-        'Phí cố định',
-        'Phí thanh toán',
-        'Phí hoa hồng Tiếp thị liên kết',
-        'Phí dịch vụ PiShip'
-    ]
-    df_fees = df[df['Tổng kết thanh toán đã chuyển'].astype(str).str.contains("Phí", na=False)]
-    df_fees = df_fees.set_index('Tổng kết thanh toán đã chuyển')
-    fee_values = []
-    for item in fee_items:
-        try:
-            val = float(df_fees.loc[item, 'Số tiền (VND)'])
-            fee_values.append(abs(val))
-        except Exception:
-            fee_values.append(0)
+# Tạo DataFrame xuất Excel
+result = pd.DataFrame({
+    'Tên chi phí': fee_items + ['Tổng phí giao dịch', 'Tổng doanh thu sản phẩm', 'Tỷ lệ phí/doanh thu (%)'],
+    'Giá trị (VND)': fee_values + [total_fees, revenue, ''],
+    'Tỷ lệ so với doanh thu (%)': [f"{v/revenue*100:.2f}" for v in fee_values] + [f"{total_fees/revenue*100:.2f}", '', f"{total_fees/revenue*100:.2f}"]
+})
 
-    revenue = float(df[df['Tổng kết thanh toán đã chuyển'] == "Tổng tiền sản phẩm"]['Số tiền (VND)'].values[0])
-    total_fees = sum(fee_values)
-
-    st.markdown("### Số liệu tổng hợp")
-    st.write(f"**Tổng phí giao dịch:** {total_fees:,.0f} VND")
-    st.write(f"**T
+# Xuất file Excel
+file_out = "bao_cao_chi_phi.xlsx"
+result.to_excel(file_out, index=False)
+print("Đã xuất file:", file_out)
