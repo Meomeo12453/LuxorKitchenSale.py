@@ -7,9 +7,24 @@ import plotly.graph_objects as go
 
 st.set_page_config(page_title="Dashboard PDF", layout="wide")
 
-st.title("Báo cáo PDF doanh thu & chi phí (vẽ chart trực quan)")
+st.title("Báo cáo PDF doanh thu & chi phí (chart trực quan & xuất file)")
 
 uploaded_pdf = st.file_uploader("Tải lên file PDF báo cáo", type=["pdf"])
+
+def parse_date_range(pdf_text):
+    lines = pdf_text.split('\n')
+    from_date = None
+    to_date = None
+    for line in lines:
+        if "Báo cáo từ" in line:
+            from_date_match = re.search(r"-?(\d{8})", line)
+            if from_date_match:
+                from_date = from_date_match.group(1)
+        if "đến" in line.lower():
+            to_date_match = re.search(r"-?(\d{8})", line)
+            if to_date_match:
+                to_date = to_date_match.group(1)
+    return from_date, to_date
 
 def parse_pdf_summary(pdf_text):
     pattern = r"(?P<item>[^\d\n]+)\s+(?P<amount>[-₫\d,.]+)"
@@ -31,8 +46,18 @@ if uploaded_pdf:
     with pdfplumber.open(uploaded_pdf) as pdf:
         all_text = ""
         for page in pdf.pages:
-            all_text += page.extract_text() + "\n"
-    
+            text = page.extract_text()
+            if text:
+                all_text += text + "\n"
+
+    # Lấy ngày báo cáo từ file PDF
+    from_date, to_date = parse_date_range(all_text)
+    # Hiển thị thời gian báo cáo ở đầu dashboard
+    if from_date and to_date:
+        st.success(f"**Báo cáo từ ngày:** {from_date[:4]}-{from_date[4:6]}-{from_date[6:]}  &nbsp;&nbsp; **đến ngày:** {to_date[:4]}-{to_date[4:6]}-{to_date[6:]}")
+    else:
+        st.warning("Không nhận diện được thời gian báo cáo trong file PDF.")
+
     df_summary = parse_pdf_summary(all_text)
     st.subheader("Bảng tổng hợp chi phí & doanh thu")
     st.dataframe(df_summary)
@@ -41,7 +66,6 @@ if uploaded_pdf:
     revenue_row = df_summary[df_summary["Hạng mục"].str.contains("Tổng tiền sản phẩm", case=False)]
     if not revenue_row.empty:
         revenue = float(revenue_row["Giá trị (VND)"].iloc[0])
-        # Thêm cột phần trăm
         df_summary["% trên doanh thu"] = df_summary["Giá trị (VND)"].apply(lambda x: x/revenue*100 if revenue else 0)
     else:
         st.warning("Không tìm thấy dòng 'Tổng tiền sản phẩm' trong bảng dữ liệu PDF.")
