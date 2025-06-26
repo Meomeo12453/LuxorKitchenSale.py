@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 
 st.set_page_config(page_title="Dashboard PDF", layout="wide")
 
-st.title("Báo cáo PDF doanh thu & chi phí (chart trực quan & xuất file)")
+st.title("Báo cáo PDF chi phí so với tổng tiền sản phẩm")
 
 uploaded_pdf = st.file_uploader("Tải lên file PDF báo cáo", type=["pdf"])
 
@@ -52,29 +52,33 @@ if uploaded_pdf:
 
     # Lấy ngày báo cáo từ file PDF
     from_date, to_date = parse_date_range(all_text)
-    # Hiển thị thời gian báo cáo ở đầu dashboard
     if from_date and to_date:
         st.success(f"**Báo cáo từ ngày:** {from_date[:4]}-{from_date[4:6]}-{from_date[6:]}  &nbsp;&nbsp; **đến ngày:** {to_date[:4]}-{to_date[4:6]}-{to_date[6:]}")
     else:
         st.warning("Không nhận diện được thời gian báo cáo trong file PDF.")
 
     df_summary = parse_pdf_summary(all_text)
-    st.subheader("Bảng tổng hợp chi phí & doanh thu")
-    st.dataframe(df_summary)
+    # Loại bỏ các dòng "Báo cáo từ", "đến" khỏi bảng
+    df_summary = df_summary[~df_summary["Hạng mục"].str.contains("Báo cáo từ|đến", case=False, na=False)].reset_index(drop=True)
 
-    # Lấy tổng doanh thu
-    revenue_row = df_summary[df_summary["Hạng mục"].str.contains("Tổng tiền sản phẩm", case=False)]
+    # Lọc chỉ các mục chi phí: tên có "phí" (không phân biệt hoa/thường)
+    fee_df = df_summary[df_summary["Hạng mục"].str.contains("phí", case=False, na=False)].copy()
+
+    # Tìm tổng tiền sản phẩm
+    revenue_row = df_summary[df_summary["Hạng mục"].str.contains("Tổng tiền sản phẩm", case=False, na=False)]
     if not revenue_row.empty:
         revenue = float(revenue_row["Giá trị (VND)"].iloc[0])
-        df_summary["% trên doanh thu"] = df_summary["Giá trị (VND)"].apply(lambda x: x/revenue*100 if revenue else 0)
+        fee_df["% trên doanh thu"] = fee_df["Giá trị (VND)"].apply(lambda x: abs(x)/revenue*100 if revenue else 0)
     else:
         st.warning("Không tìm thấy dòng 'Tổng tiền sản phẩm' trong bảng dữ liệu PDF.")
         revenue = None
-        df_summary["% trên doanh thu"] = 0.0
+        fee_df["% trên doanh thu"] = 0.0
+
+    st.subheader("Bảng các loại chi phí & phần trăm so với tổng tiền sản phẩm")
+    st.dataframe(fee_df)
 
     # 1. Bar chart: Chi phí vs % doanh thu
-    st.subheader("Biểu đồ cột: Giá trị và phần trăm chi phí trên tổng doanh thu")
-    fee_df = df_summary[(df_summary["Giá trị (VND)"]<0) & (df_summary["% trên doanh thu"]!=0)]
+    st.subheader("Biểu đồ cột: Giá trị và phần trăm chi phí trên tổng tiền sản phẩm")
     fig, ax = plt.subplots(figsize=(10,5))
     bars = ax.bar(fee_df["Hạng mục"], abs(fee_df["Giá trị (VND)"]), color='orange')
     for bar, pct in zip(bars, abs(fee_df["% trên doanh thu"])):
@@ -82,7 +86,7 @@ if uploaded_pdf:
                     xytext=(0, 5), textcoords="offset points", ha="center", va="bottom", fontsize=10, color="black", fontweight='bold')
     ax.set_ylabel("Giá trị (VND)")
     ax.set_xlabel("Loại chi phí")
-    ax.set_title("Giá trị & % từng loại chi phí so với tổng doanh thu")
+    ax.set_title("Giá trị & % từng loại chi phí so với tổng tiền sản phẩm")
     plt.xticks(rotation=18)
     st.pyplot(fig)
 
@@ -98,7 +102,7 @@ if uploaded_pdf:
 
     # 3. Waterfall chart: Doanh thu - lần lượt trừ chi phí
     st.subheader("Biểu đồ thác nước: Quá trình trừ chi phí khỏi doanh thu")
-    labels = ["Tổng doanh thu"] + fee_df["Hạng mục"].tolist() + ["Còn lại sau chi phí"]
+    labels = ["Tổng tiền sản phẩm"] + fee_df["Hạng mục"].tolist() + ["Còn lại sau chi phí"]
     values = [revenue] + fee_df["Giá trị (VND)"].tolist() + [revenue + fee_df["Giá trị (VND)"].sum()]
     measure = ["absolute"] + ["relative"]*len(fee_df) + ["total"]
     fig3 = go.Figure(go.Waterfall(
@@ -113,12 +117,12 @@ if uploaded_pdf:
     fig3.update_layout(title="Dòng tiền sau khi trừ các khoản chi phí", height=450)
     st.plotly_chart(fig3, use_container_width=True)
 
-    # Xuất file Excel tổng hợp
-    out_xlsx = "tong_hop_bao_cao_pdf.xlsx"
-    df_summary.to_excel(out_xlsx, index=False)
+    # Xuất file Excel tổng hợp chỉ gồm các chi phí
+    out_xlsx = "tong_hop_chi_phi_vs_doanh_thu.xlsx"
+    fee_df.to_excel(out_xlsx, index=False)
     with open(out_xlsx, "rb") as f:
-        st.download_button("Tải file tổng hợp Excel", f, out_xlsx, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button("Tải file chi phí so với doanh thu", f, out_xlsx, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 else:
     st.info("Vui lòng upload file PDF báo cáo.")
 
-st.caption("Made by ChatGPT – muốn tối ưu thêm, hãy nhắn trực tiếp nhé!")
+st.caption("Made by ChatGPT – tối ưu code theo thực tế, liên hệ khi cần mở rộng thêm các loại chi phí.")
