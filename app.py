@@ -1,128 +1,260 @@
 import streamlit as st
+from PIL import Image
+import os
 import pandas as pd
-import pdfplumber
-import re
+import numpy as np
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
+import plotly.express as px
+import colorsys
+from io import BytesIO
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill, Alignment, Font
+import random
+import base64
 
-st.set_page_config(page_title="Dashboard PDF", layout="wide")
+# ========== LOGO & GIAO DIỆN =============
+st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
+st.markdown("""
+    <style>
+    .block-container {padding-top:0.7rem; max-width:100vw !important;}
+    .stApp {background: #F7F8FA;}
+    img { border-radius: 0 !important; }
+    h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
+    </style>
+""", unsafe_allow_html=True)
 
-st.title("Báo cáo PDF chi phí so với tổng tiền sản phẩm")
+LOGO_PATHS = [
+    "logo-daba.png",
+    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
+]
+logo = None
+for path in LOGO_PATHS:
+    if os.path.exists(path):
+        logo = Image.open(path)
+        break
 
-uploaded_pdf = st.file_uploader("Tải lên file PDF báo cáo", type=["pdf"])
+if logo is not None:
+    desired_height = 36
+    w, h = logo.size
+    new_width = int((w / h) * desired_height)
+    logo_resized = logo.resize((new_width, desired_height))
+    buffered = BytesIO()
+    logo_resized.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    st.markdown(
+        f"""
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding-top:4px;padding-bottom:0;">
+            <img src="data:image/png;base64,{img_str}" 
+                 width="{new_width}" height="{desired_height}" style="display:block;margin:auto;" />
+            <div style="height:5px;"></div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-def parse_date_range(pdf_text):
-    lines = pdf_text.split('\n')
-    from_date = None
-    to_date = None
-    for line in lines:
-        if "Báo cáo từ" in line:
-            from_date_match = re.search(r"-?(\d{8})", line)
-            if from_date_match:
-                from_date = from_date_match.group(1)
-        if "đến" in line.lower():
-            to_date_match = re.search(r"-?(\d{8})", line)
-            if to_date_match:
-                to_date = to_date_match.group(1)
-    return from_date, to_date
+st.markdown(
+    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
+    unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
+    unsafe_allow_html=True)
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-def parse_pdf_summary(pdf_text):
-    pattern = r"(?P<item>[^\d\n]+)\s+(?P<amount>[-₫\d,.]+)"
-    summary = re.findall(pattern, pdf_text)
-    rows = []
-    for item, amount in summary:
-        item = item.strip().replace("\n", " ")
-        amount = amount.strip().replace("₫", "").replace(",", "").replace(".", "")
-        try:
-            value = float(amount.replace("-", "")) * (-1 if "-" in amount else 1)
-        except:
-            continue
-        if len(item) < 2 or not re.search(r'\d', amount):
-            continue
-        rows.append((item, value))
-    return pd.DataFrame(rows, columns=["Hạng mục", "Giá trị (VND)"])
+# ========== CONTROL ==========
+st.markdown("### 🔎 Tùy chọn phân tích")
+col1, col2 = st.columns([2, 1])
+with col1:
+    chart_type = st.radio(
+        "Chọn loại biểu đồ:",
+        ["Biểu đồ cột chồng", "Sơ đồ Sunburst", "Biểu đồ Pareto", "Biểu đồ tròn (Pie)"],
+        horizontal=True
+    )
+with col2:
+    filter_nganh = st.multiselect("Lọc theo nhóm khách hàng:", ["Catalyst", "Visionary", "Trailblazer"], default=[])
 
-if uploaded_pdf:
-    with pdfplumber.open(uploaded_pdf) as pdf:
-        all_text = ""
-        for page in pdf.pages:
-            text = page.extract_text()
-            if text:
-                all_text += text + "\n"
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-    # Lấy ngày báo cáo từ file PDF
-    from_date, to_date = parse_date_range(all_text)
-    if from_date and to_date:
-        st.success(f"**Báo cáo từ ngày:** {from_date[:4]}-{from_date[4:6]}-{from_date[6:]}  &nbsp;&nbsp; **đến ngày:** {to_date[:4]}-{to_date[4:6]}-{to_date[6:]}")
-    else:
-        st.warning("Không nhận diện được thời gian báo cáo trong file PDF.")
+# ======= MULTI FILE UPLOAD =======
+st.markdown("### 1. Tải lên tối đa 10 file Excel (.xlsx)")
+uploaded_files = st.file_uploader(
+    "**Chọn nhiều file hoặc kéo thả nhiều file Excel**",
+    type="xlsx",
+    accept_multiple_files=True,
+    help="Chỉ nhận Excel, <200MB mỗi file. Các file phải cùng cấu trúc cột."
+)
+if not uploaded_files:
+    st.info("💡 Hãy upload 1 hoặc nhiều file Excel mẫu để bắt đầu sử dụng Dashboard.")
+    with st.expander("📋 Xem hướng dẫn & file mẫu", expanded=False):
+        st.markdown(
+            "- Chọn hoặc kéo thả **1–10 file Excel**.\n"
+            "- File cần các cột: **Mã khách hàng, Tên khách hàng, Nhóm khách hàng, Tổng bán trừ trả hàng, Ghi chú**.\n"
+            "- Nếu lỗi, kiểm tra lại tiêu đề cột trong file Excel."
+        )
+    st.stop()
 
-    df_summary = parse_pdf_summary(all_text)
-    # Loại bỏ các dòng "Báo cáo từ", "đến" khỏi bảng
-    df_summary = df_summary[~df_summary["Hạng mục"].str.contains("Báo cáo từ|đến", case=False, na=False)].reset_index(drop=True)
+# ===== GỘP & LÀM SẠCH DỮ LIỆU =====
+dfs = []
+for f in uploaded_files[:10]:
+    dft = pd.read_excel(f)
+    dfs.append(dft)
+df = pd.concat(dfs, ignore_index=True)
 
-    # Lọc chỉ các mục chi phí: tên có "phí" (không phân biệt hoa/thường)
-    fee_df = df_summary[df_summary["Hạng mục"].str.contains("phí", case=False, na=False)].copy()
+# Chuẩn hóa
+df['Mã khách hàng'] = df['Mã khách hàng'].astype(str).str.strip()
+df['Ghi chú'] = df['Ghi chú'].astype(str).str.strip()
+df['Ghi chú'] = df['Ghi chú'].replace({'None': None, 'nan': None, 'NaN': None, '': None})
+df['Tổng bán trừ trả hàng'] = pd.to_numeric(df['Tổng bán trừ trả hàng'], errors='coerce').fillna(0)
+df = df.drop_duplicates(subset=['Mã khách hàng'], keep='first')  # Loại trùng mã khách hàng nếu có
 
-    # Tìm tổng tiền sản phẩm
-    revenue_row = df_summary[df_summary["Hạng mục"].str.contains("Tổng tiền sản phẩm", case=False, na=False)]
-    if not revenue_row.empty:
-        revenue = float(revenue_row["Giá trị (VND)"].iloc[0])
-        fee_df["% trên doanh thu"] = fee_df["Giá trị (VND)"].apply(lambda x: abs(x)/revenue*100 if revenue else 0)
-    else:
-        st.warning("Không tìm thấy dòng 'Tổng tiền sản phẩm' trong bảng dữ liệu PDF.")
-        revenue = None
-        fee_df["% trên doanh thu"] = 0.0
+all_codes = set(df['Mã khách hàng'])
 
-    st.subheader("Bảng các loại chi phí & phần trăm so với tổng tiền sản phẩm")
-    st.dataframe(fee_df)
+def get_parent_id(x):
+    if pd.isnull(x) or x is None:
+        return None
+    x = str(x).strip()
+    return x if x in all_codes else None
+df['parent_id'] = df['Ghi chú'].apply(get_parent_id)
 
-    # 1. Bar chart: Chi phí vs % doanh thu
-    st.subheader("Biểu đồ cột: Giá trị và phần trăm chi phí trên tổng tiền sản phẩm")
-    fig, ax = plt.subplots(figsize=(10,5))
-    bars = ax.bar(fee_df["Hạng mục"], abs(fee_df["Giá trị (VND)"]), color='orange')
-    for bar, pct in zip(bars, abs(fee_df["% trên doanh thu"])):
-        ax.annotate(f"{pct:.1f}%", xy=(bar.get_x() + bar.get_width()/2, bar.get_height()),
-                    xytext=(0, 5), textcoords="offset points", ha="center", va="bottom", fontsize=10, color="black", fontweight='bold')
-    ax.set_ylabel("Giá trị (VND)")
-    ax.set_xlabel("Loại chi phí")
-    ax.set_title("Giá trị & % từng loại chi phí so với tổng tiền sản phẩm")
-    plt.xticks(rotation=18)
+# Xây parent_map (cha: [con])
+parent_map = {}
+for idx, row in df.iterrows():
+    pid = row['parent_id']
+    code = row['Mã khách hàng']
+    if pd.notnull(pid) and pid is not None:
+        parent_map.setdefault(pid, []).append(code)
+
+# Đệ quy lấy tất cả thuộc cấp
+def get_all_descendants(code, parent_map):
+    result = []
+    children = parent_map.get(code, [])
+    result.extend(children)
+    for child in children:
+        result.extend(get_all_descendants(child, parent_map))
+    return result
+
+desc_counts = []
+ds_he_thong = []
+for idx, row in df.iterrows():
+    code = row['Mã khách hàng']
+    descendants = get_all_descendants(code, parent_map)
+    desc_counts.append(len(descendants))
+    doanhso = df[df['Mã khách hàng'].isin(descendants)]['Tổng bán trừ trả hàng'].sum() if descendants else 0
+    ds_he_thong.append(doanhso)
+df['Số cấp dưới'] = desc_counts
+df['Doanh số hệ thống'] = ds_he_thong
+
+# Tính override_comm
+network = {
+    'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
+    'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
+    'Trailblazer':  {'comm_rate': 0.40, 'override_rate': 0.05},
+}
+df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('comm_rate', 0))
+df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
+df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
+
+if filter_nganh:
+    df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
+
+st.markdown("### 2. Bảng dữ liệu đại lý đã xử lý")
+st.dataframe(df, use_container_width=True, hide_index=True)
+
+st.markdown("### 3. Biểu đồ phân tích dữ liệu")
+if chart_type == "Biểu đồ cột chồng":
+    fig, ax = plt.subplots(figsize=(12,5))
+    ind = np.arange(len(df))
+    ax.bar(ind, df['Tổng bán trừ trả hàng'], width=0.5, label='Tổng bán cá nhân')
+    ax.bar(ind, df['override_comm'], width=0.5, bottom=df['Tổng bán trừ trả hàng'], label='Hoa hồng hệ thống')
+    ax.set_ylabel('Số tiền (VND)')
+    ax.set_title('Tổng bán & Hoa hồng hệ thống từng cá nhân')
+    ax.set_xticks(ind)
+    ax.set_xticklabels(df['Tên khách hàng'], rotation=60, ha='right')
+    ax.legend()
     st.pyplot(fig)
+elif chart_type == "Sơ đồ Sunburst":
+    try:
+        fig2 = px.sunburst(
+            df,
+            path=['Nhóm khách hàng', 'Tên khách hàng'],
+            values='Tổng bán trừ trả hàng',
+            title="Sơ đồ hệ thống cấp bậc & doanh số"
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+    except Exception as e:
+        st.error(f"Lỗi khi vẽ Sunburst chart: {e}")
+elif chart_type == "Biểu đồ Pareto":
+    try:
+        df_sorted = df.sort_values('Tổng bán trừ trả hàng', ascending=False)
+        cum_sum = df_sorted['Tổng bán trừ trả hàng'].cumsum()
+        cum_perc = 100 * cum_sum / df_sorted['Tổng bán trừ trả hàng'].sum()
+        fig3, ax1 = plt.subplots(figsize=(10,5))
+        ax1.bar(np.arange(len(df_sorted)), df_sorted['Tổng bán trừ trả hàng'], label="Doanh số")
+        ax1.set_ylabel('Doanh số')
+        ax1.set_xticks(range(len(df_sorted)))
+        ax1.set_xticklabels(df_sorted['Tên khách hàng'], rotation=60, ha='right')
+        ax2 = ax1.twinx()
+        ax2.plot(np.arange(len(df_sorted)), cum_perc, color='red', marker='o', label='Tích lũy (%)')
+        ax2.set_ylabel('Tỷ lệ tích lũy (%)')
+        ax1.set_title('Biểu đồ Pareto: Doanh số & tỷ trọng tích lũy')
+        fig3.tight_layout()
+        st.pyplot(fig3)
+    except Exception as e:
+        st.error(f"Lỗi khi vẽ Pareto chart: {e}")
+elif chart_type == "Biểu đồ tròn (Pie)":
+    try:
+        fig4, ax4 = plt.subplots(figsize=(6,6))
+        s = df.groupby('Nhóm khách hàng')['Tổng bán trừ trả hàng'].sum()
+        ax4.pie(s, labels=s.index, autopct='%1.1f%%')
+        ax4.set_title('Tỷ trọng doanh số theo nhóm khách hàng')
+        st.pyplot(fig4)
+    except Exception as e:
+        st.error(f"Lỗi khi vẽ Pie chart: {e}")
 
-    # 2. Pie chart: Cơ cấu chi phí trên tổng phí
-    st.subheader("Biểu đồ tròn (Pie): Cơ cấu từng loại chi phí")
-    pie_labels = fee_df["Hạng mục"]
-    pie_values = abs(fee_df["Giá trị (VND)"])
-    fig2, ax2 = plt.subplots()
-    wedges, texts, autotexts = ax2.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', startangle=90)
-    ax2.axis('equal')
-    ax2.set_title("Tỷ trọng từng loại chi phí trong tổng phí")
-    st.pyplot(fig2)
+st.markdown("### 4. Tải file kết quả định dạng màu nhóm F1")
+output_file = 'sales_report_dep.xlsx'
+df_export = df.sort_values(by=['parent_id', 'Mã khách hàng'], ascending=[True, True], na_position='last')
+df_export.to_excel(output_file, index=False)
 
-    # 3. Waterfall chart: Doanh thu - lần lượt trừ chi phí
-    st.subheader("Biểu đồ thác nước: Quá trình trừ chi phí khỏi doanh thu")
-    labels = ["Tổng tiền sản phẩm"] + fee_df["Hạng mục"].tolist() + ["Còn lại sau chi phí"]
-    values = [revenue] + fee_df["Giá trị (VND)"].tolist() + [revenue + fee_df["Giá trị (VND)"].sum()]
-    measure = ["absolute"] + ["relative"]*len(fee_df) + ["total"]
-    fig3 = go.Figure(go.Waterfall(
-        name = "Dòng tiền",
-        orientation = "v",
-        measure = measure,
-        x = labels,
-        y = values,
-        text = [f"{v:,.0f}" for v in values],
-        connector = {"line": {"color": "orange"}}
-    ))
-    fig3.update_layout(title="Dòng tiền sau khi trừ các khoản chi phí", height=450)
-    st.plotly_chart(fig3, use_container_width=True)
-
-    # Xuất file Excel tổng hợp chỉ gồm các chi phí
-    out_xlsx = "tong_hop_chi_phi_vs_doanh_thu.xlsx"
-    fee_df.to_excel(out_xlsx, index=False)
-    with open(out_xlsx, "rb") as f:
-        st.download_button("Tải file chi phí so với doanh thu", f, out_xlsx, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-else:
-    st.info("Vui lòng upload file PDF báo cáo.")
-
-st.caption("Made by ChatGPT – tối ưu code theo thực tế, liên hệ khi cần mở rộng thêm các loại chi phí.")
+# Tô màu pastel, chỉ cha (có cấp dưới trực tiếp) và F1 cùng màu
+wb = load_workbook(output_file)
+ws = wb.active
+col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
+col_parent = [cell.value for cell in ws[1]].index('parent_id')+1
+ma_cha_list = df_export[df_export['Mã khách hàng'].isin(df_export['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
+def pastel_color(seed_val):
+    random.seed(str(seed_val))
+    h = random.random()
+    s = 0.28 + random.random()*0.09
+    v = 0.97
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
+    return "%02X%02X%02X" % (int(r*255), int(g*255), int(b*255))
+ma_cha_to_color = {ma_cha: PatternFill(start_color=pastel_color(ma_cha), end_color=pastel_color(ma_cha), fill_type='solid') for ma_cha in ma_cha_list}
+for row in range(2, ws.max_row + 1):
+    ma_kh = str(ws.cell(row=row, column=col_makh).value)
+    parent_id = ws.cell(row=row, column=col_parent).value
+    if ma_kh in ma_cha_to_color:
+        fill = ma_cha_to_color[ma_kh]
+    elif parent_id in ma_cha_to_color:
+        fill = ma_cha_to_color[parent_id]
+    else:
+        fill = PatternFill(fill_type=None)
+    for col in range(1, ws.max_column + 1):
+        ws.cell(row=row, column=col).fill = fill
+header_fill = PatternFill(start_color='FFE699', end_color='FFE699', fill_type='solid')
+header_font = Font(bold=True, color='000000')
+header_align = Alignment(horizontal='center', vertical='center')
+for col in range(1, ws.max_column + 1):
+    cell = ws.cell(row=1, column=col)
+    cell.fill = header_fill
+    cell.font = header_font
+    cell.alignment = header_align
+bio = BytesIO()
+wb.save(bio)
+downloaded = st.download_button(
+    label="📥 Tải file Excel đã định dạng",
+    data=bio.getvalue(),
+    file_name=output_file,
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+if downloaded:
+    st.toast("✅ Đã tải xuống!", icon="✅")
