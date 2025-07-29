@@ -25,7 +25,7 @@ st.markdown("""
 
 
 st.markdown(
-    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>CÔNG TY TNHH DABA SAIGON</div>",
+    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:1000;'>CÔNG TY TNHH DABA SAIGON</div>",
     unsafe_allow_html=True)
 st.markdown(
     "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
