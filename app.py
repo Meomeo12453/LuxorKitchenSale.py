@@ -34,7 +34,7 @@ for path in LOGO_PATHS:
         break
 
 if logo is not None:
-    desired_height = 36
+    desired_height = 20
     w, h = logo.size
     new_width = int((w / h) * desired_height)
     logo_resized = logo.resize((new_width, desired_height))
@@ -46,7 +46,7 @@ if logo is not None:
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding-top:4px;padding-bottom:0;">
             <img src="data:image/png;base64,{img_str}" 
                  width="{new_width}" height="{desired_height}" style="display:block;margin:auto;" />
-            <div style="height:30px;"></div>
+            <div style="height:10px;"></div>
         </div>
         """,
         unsafe_allow_html=True
