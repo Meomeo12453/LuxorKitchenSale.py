@@ -12,8 +12,9 @@ from openpyxl.styles import PatternFill, Alignment, Font
 import random
 import base64
 
+
 # ========== LOGO & GIAO DIỆN =============
-st.set_page_config(page_title="BẢNG TÍNH GIÁ TRỊ HOA HỒNG", layout="wide")
+st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 st.markdown("""
     <style>
     .block-container {padding-top:0.7rem; max-width:100vw !important;}
@@ -23,14 +24,43 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+LOGO_PATHS = [
+    "logo-daba.png",
+    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
+]
+logo = None
+for path in LOGO_PATHS:
+    if os.path.exists(path):
+        logo = Image.open(path)
+        break
+
+if logo is not None:
+    desired_height = 36
+    w, h = logo.size
+    new_width = int((w / h) * desired_height)
+    logo_resized = logo.resize((new_width, desired_height))
+    buffered = BytesIO()
+    logo_resized.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    st.markdown(
+        f"""
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding-top:4px;padding-bottom:0;">
+            <img src="data:image/png;base64,{img_str}" 
+                 width="{new_width}" height="{desired_height}" style="display:block;margin:auto;" />
+            <div style="height:5px;"></div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 st.markdown(
-    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:1000;'>CÔNG TY TNHH DABA SAIGON</div>",
+    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
     unsafe_allow_html=True)
 st.markdown(
     "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
     unsafe_allow_html=True)
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+
 
 # ========== CONTROL ==========
 st.markdown("### 🔎 Tùy chọn phân tích")
