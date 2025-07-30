@@ -12,8 +12,18 @@ from openpyxl.styles import PatternFill, Alignment, Font
 import random
 import base64
 
-# ========== LOGO & GIAO DIỆN =============
+import streamlit as st
+import os
+from PIL import Image
+from io import BytesIO
+import base64
+
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
+
+# ĐẨY TOÀN BỘ GIAO DIỆN XUỐNG (~5 dòng = ~100px, chỉnh tuỳ ý)
+for _ in range(5):
+    st.write("")
+
 st.markdown("""
     <style>
     .block-container {padding-top:0.7rem; max-width:100vw !important;}
@@ -59,6 +69,7 @@ st.markdown(
     "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
     unsafe_allow_html=True)
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+
 
 # ========== CONTROL ==========
 st.markdown("### 🔎 Tùy chọn phân tích")
