@@ -12,8 +12,74 @@ from openpyxl.styles import PatternFill, Alignment, Font
 import random
 import base64
 
+import streamlit as st
+import os
+from PIL import Image
+from io import BytesIO
+import base64
 
+st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
+st.markdown('<div style="height:50px;"></div>', unsafe_allow_html=True)
 
+st.markdown("""
+    <style>
+    .block-container {max-width:100vw !important;}
+    .stApp {background: #F7F8FA;}
+    img { border-radius: 0 !important; }
+    h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
+    .logo-title {
+        text-align:center;
+        font-size: 1.35rem;
+        font-weight: bold;
+        color: #1570af;
+        margin-top: 10px;
+        margin-bottom: 8px;
+        letter-spacing: 1.2px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+LOGO_PATHS = [
+    "logo-daba.png",
+    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
+]
+
+logo = None
+for path in LOGO_PATHS:
+    if os.path.exists(path):
+        logo = Image.open(path)
+        break
+
+if logo is not None:
+    desired_height = 48
+    w, h = logo.size
+    new_width = int((w / h) * desired_height)
+    logo_resized = logo.resize((new_width, desired_height))
+    buffered = BytesIO()
+    logo_resized.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    st.markdown(
+        f"""
+        <div style="width:100%;text-align:center;">
+            <img src="data:image/png;base64,{img_str}" width="{new_width}" height="{desired_height}" style="margin:auto;"/>
+            <div class="logo-title">Sales Daba MiniApp</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown(
+        "<div class='logo-title'>Sales Daba MiniApp</div>",
+        unsafe_allow_html=True
+    )
+
+st.markdown(
+    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
+    unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
+    unsafe_allow_html=True)
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
