@@ -13,25 +13,25 @@ import random
 import base64
 
 import streamlit as st
-from PIL import Image
 
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 
 logo_path = "/mnt/data/ec1829a9-ab16-4b98-a611-c08615ef37dc.png"
-st.write("")  # Có thể thêm vài dòng nếu muốn logo thấp xuống
 
-col1, col2, col3 = st.columns([1,3,1])
+# Căn giữa bằng columns, không cần HTML
+col1, col2, col3 = st.columns([1,2,1])
 with col2:
-    st.image(logo_path, use_column_width=False, width=120)
-    st.markdown("<div style='text-align:center;font-size:1.4rem;color:#1570af;font-weight:700;margin-bottom:6px;'>Sales Daba MiniApp</div>", unsafe_allow_html=True)
-
-st.markdown(
-    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
-    unsafe_allow_html=True)
-st.markdown(
-    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
-    unsafe_allow_html=True)
-st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+    st.image(logo_path, width=120)
+    st.markdown(
+        "<h2 style='text-align:center;color:#1570af;font-weight:700;margin-top:0;margin-bottom:2px;'>Sales Daba MiniApp</h2>",
+        unsafe_allow_html=True)
+    st.markdown(
+        "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
+        unsafe_allow_html=True)
+    st.markdown(
+        "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
+        unsafe_allow_html=True)
+    st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
 
 # ========== CONTROL ==========
