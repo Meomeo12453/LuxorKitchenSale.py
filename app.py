@@ -333,4 +333,11 @@ try:
 except PermissionError:
     st.error("Lỗi: File Excel đang mở ở chương trình khác. Đóng file lại trước khi export!")
 
-downloaded = st.download
+downloaded = st.download_button(
+    label="📥 Tải file Excel đã định dạng",
+    data=bio.getvalue(),
+    file_name=output_file,
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+if downloaded:
+    st.toast("✅ Đã tải xuống!", icon="✅")
