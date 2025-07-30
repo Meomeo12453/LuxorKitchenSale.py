@@ -23,7 +23,7 @@ import base64
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 
 # Thêm div 50px để đẩy toàn bộ giao diện xuống thấp hơn
-st.markdown('<div style="height:50px;"></div>', unsafe_allow_html=True)
+st.markdown('<div style="height:100px;"></div>', unsafe_allow_html=True)
 
 st.markdown("""
     <style>
