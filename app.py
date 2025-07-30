@@ -12,7 +12,53 @@ from openpyxl.styles import PatternFill, Alignment, Font
 import random
 import base64
 
+# ========== LOGO & GIAO DIỆN =============
+st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
+st.markdown("""
+    <style>
+    .block-container {padding-top:0.7rem; max-width:100vw !important;}
+    .stApp {background: #F7F8FA;}
+    img { border-radius: 0 !important; }
+    h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
+    </style>
+""", unsafe_allow_html=True)
 
+LOGO_PATHS = [
+    "logo-daba.png",
+    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
+]
+logo = None
+for path in LOGO_PATHS:
+    if os.path.exists(path):
+        logo = Image.open(path)
+        break
+
+if logo is not None:
+    desired_height = 36
+    w, h = logo.size
+    new_width = int((w / h) * desired_height)
+    logo_resized = logo.resize((new_width, desired_height))
+    buffered = BytesIO()
+    logo_resized.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    st.markdown(
+        f"""
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding-top:4px;padding-bottom:0;">
+            <img src="data:image/png;base64,{img_str}" 
+                 width="{new_width}" height="{desired_height}" style="display:block;margin:auto;" />
+            <div style="height:5px;"></div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+st.markdown(
+    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
+    unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
+    unsafe_allow_html=True)
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
 # ========== CONTROL ==========
 st.markdown("### 🔎 Tùy chọn phân tích")
@@ -53,17 +99,12 @@ for f in uploaded_files[:10]:
     dfs.append(dft)
 df = pd.concat(dfs, ignore_index=True)
 
-# Bổ sung kiểm tra cột
-for col in ['Mã khách hàng','Nhóm khách hàng','Tổng bán trừ trả hàng','Ghi chú','Tên khách hàng']:
-    if col not in df.columns:
-        st.error(f"Thiếu cột '{col}' trong file Excel. Vui lòng kiểm tra lại!")
-        st.stop()
-
+# Chuẩn hóa
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str).str.strip()
 df['Ghi chú'] = df['Ghi chú'].astype(str).str.strip()
 df['Ghi chú'] = df['Ghi chú'].replace({'None': None, 'nan': None, 'NaN': None, '': None})
 df['Tổng bán trừ trả hàng'] = pd.to_numeric(df['Tổng bán trừ trả hàng'], errors='coerce').fillna(0)
-df = df.drop_duplicates(subset=['Mã khách hàng'], keep='first')
+df = df.drop_duplicates(subset=['Mã khách hàng'], keep='first')  # Loại trùng mã khách hàng nếu có
 
 all_codes = set(df['Mã khách hàng'])
 
@@ -82,17 +123,13 @@ for idx, row in df.iterrows():
     if pd.notnull(pid) and pid is not None:
         parent_map.setdefault(pid, []).append(code)
 
-# Đệ quy lấy tất cả thuộc cấp (chống vòng lặp vô hạn)
-def get_all_descendants(code, parent_map, visited=None):
-    if visited is None:
-        visited = set()
+# Đệ quy lấy tất cả thuộc cấp
+def get_all_descendants(code, parent_map):
     result = []
     children = parent_map.get(code, [])
+    result.extend(children)
     for child in children:
-        if child not in visited:
-            visited.add(child)
-            result.append(child)
-            result.extend(get_all_descendants(child, parent_map, visited))
+        result.extend(get_all_descendants(child, parent_map))
     return result
 
 desc_counts = []
