@@ -13,56 +13,7 @@ import random
 import base64
 
 
-import streamlit as st
-import os
-from PIL import Image
-from io import BytesIO
-import base64
 
-# ========== LOGO & GIAO DIỆN =============
-st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
-
-# Thêm div 50px để đẩy toàn bộ giao diện xuống thấp hơn
-st.markdown('<div style="height:100px;"></div>', unsafe_allow_html=True)
-
-st.markdown("""
-    <style>
-    .block-container {max-width:100vw !important;}
-    .stApp {background: #F7F8FA;}
-    img { border-radius: 0 !important; }
-    h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
-    </style>
-""", unsafe_allow_html=True)
-
-LOGO_PATHS = [
-    "logo-daba.png",
-    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
-]
-
-logo = None
-for path in LOGO_PATHS:
-    if os.path.exists(path):
-        logo = Image.open(path)
-        break
-
-if logo is not None:
-    desired_height = 36
-    w, h = logo.size
-    new_width = int((w / h) * desired_height)
-    logo_resized = logo.resize((new_width, desired_height))
-    buffered = BytesIO()
-    logo_resized.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-    st.markdown(
-        f"""
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding-top:4px;padding-bottom:0;">
-            <img src="data:image/png;base64,{img_str}" 
-                 width="{new_width}" height="{desired_height}" style="display:block;margin:auto;" />
-            <div style="height:5px;"></div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
 
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
