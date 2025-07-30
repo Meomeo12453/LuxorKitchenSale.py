@@ -145,7 +145,7 @@ if null_kh > 0:
 
 # Cảnh báo ghi chú nhiều mã hoặc ký tự lạ
 if df['Ghi chú'].str.contains(',|;|/|\\| ').any():
-    st.warning("⚠️ Một số dòng 'Ghi chú' chứa nhiều mã hoặc ký tự phân cách (dấu phẩy, chấm phẩy, khoảng trắng, ...). Ứng dụng chỉ lấy mã đầu tiên.")
+    st.warning("⚠️ Một số dòng 'Ghi chú cấp bậc' chứa nhiều mã hoặc ký tự phân cách (dấu phẩy, chấm phẩy, khoảng trắng, ...). Ứng dụng chỉ lấy mã đầu tiên.")
 
 all_codes = set(df['Mã khách hàng'])
 
@@ -159,7 +159,7 @@ df['parent_id'] = df['Ghi chú'].apply(get_parent_id)
 # Cảnh báo nếu 'Ghi chú' tham chiếu mã KH không tồn tại
 invalid_parents = df[(df['Ghi chú'].notnull()) & (~df['Ghi chú'].isin(all_codes))]
 if len(invalid_parents) > 0:
-    st.warning(f"⚠️ Có {len(invalid_parents)} dòng có 'Ghi chú' không khớp mã khách hàng nào. Các dòng này sẽ không được tính phân cấp.")
+    st.warning(f"⚠️ Có {len(invalid_parents)} dòng có 'Ghi chú phân cấp' không khớp mã khách hàng nào. Các dòng này sẽ không được tính phân cấp.")
 
 # Xây parent_map (cha: [con])
 parent_map = {}
@@ -186,7 +186,7 @@ def detect_cycles(parent_map):
     return set(cycles)
 cycles = detect_cycles(parent_map)
 if cycles:
-    st.warning(f"⚠️ Phát hiện vòng lặp cha–con trong dữ liệu! Một số nhánh bị lặp (ví dụ: {list(cycles)[:3]}...). Hãy kiểm tra lại 'Ghi chú' trong file.")
+    st.warning(f"⚠️ Chú ý các cấp bậc quản lý đang có nhiều thuộc cấp")
 
 # Đệ quy lấy tất cả thuộc cấp với visited chống vòng lặp
 def get_all_descendants(code, parent_map, visited=None):
