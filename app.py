@@ -11,70 +11,12 @@ from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Font
 import random
 import base64
-
-import streamlit as st
-import os
-from PIL import Image
-from io import BytesIO
-import base64
-
-st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
-
-# ĐẨY TOÀN BỘ GIAO DIỆN XUỐNG (~5 dòng = ~100px, chỉnh tuỳ ý)
-for _ in range(5):
-    st.write("")
-
-st.markdown("""
-    <style>
-    .block-container {padding-top:0.7rem; max-width:100vw !important;}
-    .stApp {background: #F7F8FA;}
-    img { border-radius: 0 !important; }
-    h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
-    </style>
-""", unsafe_allow_html=True)
-
-LOGO_PATHS = [
-    "logo-daba.png",
-    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
-]
-logo = None
-for path in LOGO_PATHS:
-    if os.path.exists(path):
-        logo = Image.open(path)
-        break
-
-if logo is not None:
-    desired_height = 36
-    w, h = logo.size
-    new_width = int((w / h) * desired_height)
-    logo_resized = logo.resize((new_width, desired_height))
-    buffered = BytesIO()
-    logo_resized.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-    st.markdown(
-        f"""
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding-top:4px;padding-bottom:0;">
-            <img src="data:image/png;base64,{img_str}" 
-                 width="{new_width}" height="{desired_height}" style="display:block;margin:auto;" />
-            <div style="height:5px;"></div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-st.markdown(
-    "<div style='text-align:center;font-size:40px;color:#1570af;font-weight:600;'>BẢNG TÍNH HOA HỒNG THÁNG</div>",
-    unsafe_allow_html=True)
-st.markdown(
-    "<div style='text-align:center;font-size:25px;color:#555;'>Công ty Daba Saigon - Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
-    unsafe_allow_html=True)
-st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
-
+import uuid
 
 # ========== LOGO & GIAO DIỆN =============
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 
-# Đẩy đồng bộ toàn bộ layout xuống (4 dòng ~80-100px)
+# Đẩy layout xuống để logo không bị cắt
 for _ in range(4):
     st.write("")
 
@@ -115,6 +57,8 @@ if logo is not None:
         """,
         unsafe_allow_html=True
     )
+else:
+    st.warning("⚠️ Không tìm thấy logo! Vui lòng kiểm tra lại tên file/logo trong thư mục app.")
 
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
@@ -163,12 +107,45 @@ for f in uploaded_files[:10]:
     dfs.append(dft)
 df = pd.concat(dfs, ignore_index=True)
 
-# Chuẩn hóa
+# Cảnh báo font tiếng Việt trong tên KH
+if any(df['Tên khách hàng'].astype(str).str.contains('[^\x00-\x7F]', na=False)):
+    st.info("ℹ️ File có chứa ký tự đặc biệt hoặc tiếng Việt. Nếu bị lỗi font khi mở file Excel, hãy lưu lại bằng Excel phiên bản quốc tế hoặc UTF-8.")
+
+# Kiểm tra cột bắt buộc (chấp nhận gợi ý check cột không dấu)
+required_cols = ['Mã khách hàng','Nhóm khách hàng','Tổng bán trừ trả hàng','Ghi chú','Tên khách hàng']
+missing_cols = [col for col in required_cols if col not in df.columns]
+if missing_cols:
+    all_cols_lower = [c.lower().replace(" ", "").replace("_", "") for c in df.columns]
+    for req in required_cols:
+        if req.lower().replace(" ", "").replace("_", "") not in all_cols_lower:
+            st.error(f"Thiếu cột '{req}' trong file Excel. Hãy kiểm tra lại tiêu đề cột (có thể bị thiếu dấu hoặc sai chính tả)!")
+    st.stop()
+
+# Cảnh báo nhiều mã KH trùng
+n_trung = len(df) - df['Mã khách hàng'].nunique()
+if n_trung > 0:
+    st.warning(f"⚠️ Có {n_trung} dòng dữ liệu bị trùng mã khách hàng và đã bị loại bỏ. Vui lòng kiểm tra file gốc.")
+
+# Chuẩn hóa dữ liệu
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str).str.strip()
 df['Ghi chú'] = df['Ghi chú'].astype(str).str.strip()
 df['Ghi chú'] = df['Ghi chú'].replace({'None': None, 'nan': None, 'NaN': None, '': None})
 df['Tổng bán trừ trả hàng'] = pd.to_numeric(df['Tổng bán trừ trả hàng'], errors='coerce').fillna(0)
-df = df.drop_duplicates(subset=['Mã khách hàng'], keep='first')  # Loại trùng mã khách hàng nếu có
+df = df.drop_duplicates(subset=['Mã khách hàng'], keep='first')
+
+# Cảnh báo nếu doanh số toàn bộ = 0 hoặc thiếu dữ liệu
+if (df['Tổng bán trừ trả hàng'] == 0).all():
+    st.warning("⚠️ Tất cả doanh số đều bằng 0. Kiểm tra lại dữ liệu đầu vào!")
+if df['Tổng bán trừ trả hàng'].isnull().any():
+    st.warning("⚠️ Có dòng bị thiếu doanh số. Đã tự động điền 0 nhưng nên kiểm tra lại file gốc.")
+
+null_kh = df['Mã khách hàng'].isnull().sum()
+if null_kh > 0:
+    st.warning(f"⚠️ Có {null_kh} dòng thiếu mã khách hàng! Đã loại bỏ khỏi kết quả.")
+
+# Cảnh báo ghi chú nhiều mã hoặc ký tự lạ
+if df['Ghi chú'].str.contains(',|;|/|\\| ').any():
+    st.warning("⚠️ Một số dòng 'Ghi chú' chứa nhiều mã hoặc ký tự phân cách (dấu phẩy, chấm phẩy, khoảng trắng, ...). Ứng dụng chỉ lấy mã đầu tiên.")
 
 all_codes = set(df['Mã khách hàng'])
 
@@ -179,6 +156,11 @@ def get_parent_id(x):
     return x if x in all_codes else None
 df['parent_id'] = df['Ghi chú'].apply(get_parent_id)
 
+# Cảnh báo nếu 'Ghi chú' tham chiếu mã KH không tồn tại
+invalid_parents = df[(df['Ghi chú'].notnull()) & (~df['Ghi chú'].isin(all_codes))]
+if len(invalid_parents) > 0:
+    st.warning(f"⚠️ Có {len(invalid_parents)} dòng có 'Ghi chú' không khớp mã khách hàng nào. Các dòng này sẽ không được tính phân cấp.")
+
 # Xây parent_map (cha: [con])
 parent_map = {}
 for idx, row in df.iterrows():
@@ -186,6 +168,25 @@ for idx, row in df.iterrows():
     code = row['Mã khách hàng']
     if pd.notnull(pid) and pid is not None:
         parent_map.setdefault(pid, []).append(code)
+
+# Cảnh báo vòng lặp cha–con
+def detect_cycles(parent_map):
+    cycles = []
+    def visit(node, visited):
+        if node in visited:
+            return True
+        visited.add(node)
+        for child in parent_map.get(node, []):
+            if visit(child, visited):
+                cycles.append((node, child))
+        visited.remove(node)
+        return False
+    for k in parent_map.keys():
+        visit(k, set())
+    return set(cycles)
+cycles = detect_cycles(parent_map)
+if cycles:
+    st.warning(f"⚠️ Phát hiện vòng lặp cha–con trong dữ liệu! Một số nhánh bị lặp (ví dụ: {list(cycles)[:3]}...). Hãy kiểm tra lại 'Ghi chú' trong file.")
 
 # Đệ quy lấy tất cả thuộc cấp với visited chống vòng lặp
 def get_all_descendants(code, parent_map, visited=None):
@@ -223,6 +224,10 @@ df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 
 if filter_nganh:
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
+
+# Cảnh báo nhiều dòng hoặc nhóm (ảnh hưởng chart)
+if len(df) > 1000:
+    st.warning("⚠️ Dữ liệu quá nhiều khách hàng. Một số biểu đồ có thể hiển thị chậm hoặc xấu. Nên lọc nhóm khách hàng để xem chi tiết hơn.")
 
 st.markdown("### 2. Bảng dữ liệu đại lý đã xử lý")
 st.dataframe(df, use_container_width=True, hide_index=True)
@@ -279,7 +284,8 @@ elif chart_type == "Biểu đồ tròn (Pie)":
         st.error(f"Lỗi khi vẽ Pie chart: {e}")
 
 st.markdown("### 4. Tải file kết quả định dạng màu nhóm F1")
-output_file = 'sales_report_dep.xlsx'
+
+output_file = f'sales_report_dep_{uuid.uuid4().hex[:6]}.xlsx'
 df_export = df.sort_values(by=['parent_id', 'Mã khách hàng'], ascending=[True, True], na_position='last')
 df_export.to_excel(output_file, index=False)
 
@@ -289,6 +295,10 @@ ws = wb.active
 col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
 col_parent = [cell.value for cell in ws[1]].index('parent_id')+1
 ma_cha_list = df_export[df_export['Mã khách hàng'].isin(df_export['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
+
+if len(ma_cha_list) > 50:
+    st.warning(f"⚠️ Có quá nhiều nhóm đại lý cha (>{len(ma_cha_list)})! Màu sắc trong file Excel có thể trùng lặp và khó phân biệt.")
+
 def pastel_color(seed_val):
     random.seed(str(seed_val))
     h = random.random()
@@ -316,13 +326,11 @@ for col in range(1, ws.max_column + 1):
     cell.fill = header_fill
     cell.font = header_font
     cell.alignment = header_align
+
 bio = BytesIO()
-wb.save(bio)
-downloaded = st.download_button(
-    label="📥 Tải file Excel đã định dạng",
-    data=bio.getvalue(),
-    file_name=output_file,
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
-if downloaded:
-    st.toast("✅ Đã tải xuống!", icon="✅")
+try:
+    wb.save(bio)
+except PermissionError:
+    st.error("Lỗi: File Excel đang mở ở chương trình khác. Đóng file lại trước khi export!")
+
+downloaded = st.download
