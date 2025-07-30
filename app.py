@@ -13,11 +13,10 @@ import random
 import base64
 
 
-# ========== LOGO & GIAO DIỆN =============
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 st.markdown("""
     <style>
-    .block-container {padding-top:0.7rem; max-width:100vw !important;}
+    .block-container {padding-top:50px !important; max-width:100vw !important;}
     .stApp {background: #F7F8FA;}
     img { border-radius: 0 !important; }
     h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
