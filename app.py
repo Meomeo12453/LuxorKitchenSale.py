@@ -12,16 +12,13 @@ from openpyxl.styles import PatternFill, Alignment, Font
 import random
 import base64
 
-import streamlit as st
-
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
-logo_path = "/mnt/data/ec1829a9-ab16-4b98-a611-c08615ef37dc.png"
 
-# Dùng nhiều dòng st.write("") để đẩy logo thấp xuống (mỗi dòng ~20px)
-st.write("")
-st.write("")
-st.write("")
-st.write("")
+# ĐẨY TOÀN BỘ NỘI DUNG XUỐNG (đồng bộ mọi thành phần)
+for _ in range(4):  # 4 dòng ~80-100px, có thể tăng/giảm
+    st.write("")
+
+logo_path = "/mnt/data/ec1829a9-ab16-4b98-a611-c08615ef37dc.png"
 
 col1, col2, col3 = st.columns([1,2,1])
 with col2:
@@ -36,8 +33,6 @@ with col2:
         "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
         unsafe_allow_html=True)
     st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
-
-
 
 # ========== CONTROL ==========
 st.markdown("### 🔎 Tùy chọn phân tích")
