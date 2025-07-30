@@ -20,10 +20,10 @@ import base64
 
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 
-# Chỉ sửa phần style: padding-top thay vì div height
+# Style riêng cho app
 st.markdown("""
     <style>
-    .block-container {padding-top:80px !important; max-width:100vw !important;}
+    .block-container {max-width:100vw !important;}
     .stApp {background: #F7F8FA;}
     img { border-radius: 0 !important; }
     h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
@@ -61,7 +61,7 @@ if logo is not None:
     img_str = base64.b64encode(buffered.getvalue()).decode()
     st.markdown(
         f"""
-        <div style="width:100%;text-align:center;">
+        <div style="width:100%;text-align:center;margin-top:60px;">
             <img src="data:image/png;base64,{img_str}" width="{new_width}" height="{desired_height}" style="margin:auto;"/>
             <div class="logo-title">Sales Daba MiniApp</div>
         </div>
@@ -70,18 +70,12 @@ if logo is not None:
     )
 else:
     st.markdown(
-        "<div class='logo-title'>Sales Daba MiniApp</div>",
+        "<div class='logo-title' style='margin-top:60px;'>Sales Daba MiniApp</div>",
         unsafe_allow_html=True
     )
 
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
-    unsafe_allow_html=True)
-st.markdown(
-    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
-    unsafe_allow_html=True)
-st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
-
 
 # ========== CONTROL ==========
 st.markdown("### 🔎 Tùy chọn phân tích")
