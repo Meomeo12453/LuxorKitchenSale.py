@@ -19,11 +19,11 @@ from io import BytesIO
 import base64
 
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
-st.markdown('<div style="height:50px;"></div>', unsafe_allow_html=True)
 
+# Chỉ sửa phần style: padding-top thay vì div height
 st.markdown("""
     <style>
-    .block-container {max-width:100vw !important;}
+    .block-container {padding-top:80px !important; max-width:100vw !important;}
     .stApp {background: #F7F8FA;}
     img { border-radius: 0 !important; }
     h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
@@ -40,6 +40,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 LOGO_PATHS = [
+    "/mnt/data/c9357d23-5719-4159-9538-a74754c44e1e.png",  # Ưu tiên logo bạn vừa up
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
 ]
@@ -51,7 +52,7 @@ for path in LOGO_PATHS:
         break
 
 if logo is not None:
-    desired_height = 48
+    desired_height = 56
     w, h = logo.size
     new_width = int((w / h) * desired_height)
     logo_resized = logo.resize((new_width, desired_height))
@@ -81,13 +82,6 @@ st.markdown(
     unsafe_allow_html=True)
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
-st.markdown(
-    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
-    unsafe_allow_html=True)
-st.markdown(
-    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
-    unsafe_allow_html=True)
-st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
 # ========== CONTROL ==========
 st.markdown("### 🔎 Tùy chọn phân tích")
