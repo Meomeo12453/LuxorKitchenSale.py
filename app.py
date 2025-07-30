@@ -20,7 +20,9 @@ import base64
 
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 
-# Style riêng cho app
+# CHÈN DÒNG TRỐNG THẬT ĐỂ FIX BỊ CẮT HTML
+st.write("")  # <-- Dòng này cực kỳ quan trọng!
+
 st.markdown("""
     <style>
     .block-container {max-width:100vw !important;}
@@ -40,7 +42,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 LOGO_PATHS = [
-    "/mnt/data/c9357d23-5719-4159-9538-a74754c44e1e.png",  # Ưu tiên logo bạn vừa up
+    "/mnt/data/c9357d23-5719-4159-9538-a74754c44e1e.png",  # Ưu tiên logo bạn vừa upload
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
 ]
@@ -52,7 +54,7 @@ for path in LOGO_PATHS:
         break
 
 if logo is not None:
-    desired_height = 56
+    desired_height = 60  # cho to dễ nhìn!
     w, h = logo.size
     new_width = int((w / h) * desired_height)
     logo_resized = logo.resize((new_width, desired_height))
@@ -61,7 +63,7 @@ if logo is not None:
     img_str = base64.b64encode(buffered.getvalue()).decode()
     st.markdown(
         f"""
-        <div style="width:100%;text-align:center;margin-top:60px;">
+        <div style="width:100%;text-align:center;margin-top:40px;">
             <img src="data:image/png;base64,{img_str}" width="{new_width}" height="{desired_height}" style="margin:auto;"/>
             <div class="logo-title">Sales Daba MiniApp</div>
         </div>
@@ -70,12 +72,13 @@ if logo is not None:
     )
 else:
     st.markdown(
-        "<div class='logo-title' style='margin-top:60px;'>Sales Daba MiniApp</div>",
+        "<div class='logo-title' style='margin-top:40px;'>Sales Daba MiniApp</div>",
         unsafe_allow_html=True
     )
 
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
+    unsaf
 
 # ========== CONTROL ==========
 st.markdown("### 🔎 Tùy chọn phân tích")
