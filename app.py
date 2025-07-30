@@ -13,72 +13,26 @@ import random
 import base64
 
 import streamlit as st
-import os
 from PIL import Image
-from io import BytesIO
-import base64
 
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 
-# CHÈN DÒNG TRỐNG THẬT ĐỂ FIX BỊ CẮT HTML
-st.write("")  # <-- Dòng này cực kỳ quan trọng!
+logo_path = "/mnt/data/ec1829a9-ab16-4b98-a611-c08615ef37dc.png"
+st.write("")  # Có thể thêm vài dòng nếu muốn logo thấp xuống
 
-st.markdown("""
-    <style>
-    .block-container {max-width:100vw !important;}
-    .stApp {background: #F7F8FA;}
-    img { border-radius: 0 !important; }
-    h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
-    .logo-title {
-        text-align:center;
-        font-size: 1.35rem;
-        font-weight: bold;
-        color: #1570af;
-        margin-top: 10px;
-        margin-bottom: 8px;
-        letter-spacing: 1.2px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-LOGO_PATHS = [
-    "/mnt/data/c9357d23-5719-4159-9538-a74754c44e1e.png",  # Ưu tiên logo bạn vừa upload
-    "logo-daba.png",
-    "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
-]
-
-logo = None
-for path in LOGO_PATHS:
-    if os.path.exists(path):
-        logo = Image.open(path)
-        break
-
-if logo is not None:
-    desired_height = 60  # cho to dễ nhìn!
-    w, h = logo.size
-    new_width = int((w / h) * desired_height)
-    logo_resized = logo.resize((new_width, desired_height))
-    buffered = BytesIO()
-    logo_resized.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-    st.markdown(
-        f"""
-        <div style="width:100%;text-align:center;margin-top:40px;">
-            <img src="data:image/png;base64,{img_str}" width="{new_width}" height="{desired_height}" style="margin:auto;"/>
-            <div class="logo-title">Sales Daba MiniApp</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-else:
-    st.markdown(
-        "<div class='logo-title' style='margin-top:40px;'>Sales Daba MiniApp</div>",
-        unsafe_allow_html=True
-    )
+col1, col2, col3 = st.columns([1,3,1])
+with col2:
+    st.image(logo_path, use_column_width=False, width=120)
+    st.markdown("<div style='text-align:center;font-size:1.4rem;color:#1570af;font-weight:700;margin-bottom:6px;'>Sales Daba MiniApp</div>", unsafe_allow_html=True)
 
 st.markdown(
     "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
-    unsaf
+    unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
+    unsafe_allow_html=True)
+st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
+
 
 # ========== CONTROL ==========
 st.markdown("### 🔎 Tùy chọn phân tích")
