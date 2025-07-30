@@ -13,10 +13,21 @@ import random
 import base64
 
 
+import streamlit as st
+import os
+from PIL import Image
+from io import BytesIO
+import base64
+
+# ========== LOGO & GIAO DIỆN =============
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
+
+# Thêm div 50px để đẩy toàn bộ giao diện xuống thấp hơn
+st.markdown('<div style="height:50px;"></div>', unsafe_allow_html=True)
+
 st.markdown("""
     <style>
-    .block-container {padding-top:50px !important; max-width:100vw !important;}
+    .block-container {max-width:100vw !important;}
     .stApp {background: #F7F8FA;}
     img { border-radius: 0 !important; }
     h1, h2, h3 { font-size: 1.18rem !important; font-weight:600; }
@@ -27,6 +38,7 @@ LOGO_PATHS = [
     "logo-daba.png",
     "ef5ac011-857d-4b32-bd70-ef9ac3817106.png"
 ]
+
 logo = None
 for path in LOGO_PATHS:
     if os.path.exists(path):
@@ -59,7 +71,6 @@ st.markdown(
     "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
     unsafe_allow_html=True)
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
-
 
 # ========== CONTROL ==========
 st.markdown("### 🔎 Tùy chọn phân tích")
