@@ -63,10 +63,10 @@ if logo is not None:
     )
 
 st.markdown(
-    "<div style='text-align:center;font-size:40px;color:#1570af;font-weight:600;'>CÔNG TY TNHH DABA SAIGON</div>",
+    "<div style='text-align:center;font-size:40px;color:#1570af;font-weight:600;'>BẢNG TÍNH HOA HỒNG THÁNG</div>",
     unsafe_allow_html=True)
 st.markdown(
-    "<div style='text-align:center;font-size:25px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
+    "<div style='text-align:center;font-size:25px;color:#555;'>Công ty Daba Saigon - Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
     unsafe_allow_html=True)
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
