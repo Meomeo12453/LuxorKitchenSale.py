@@ -61,10 +61,10 @@ else:
     st.warning("⚠️ Không tìm thấy logo! Vui lòng kiểm tra lại tên file/logo trong thư mục app.")
 
 st.markdown(
-    "<div style='text-align:center;font-size:16px;color:#1570af;font-weight:600;'>Hotline: 0909.625.808</div>",
+    "<div style='text-align:center;font-size:20px;color:#1570af;font-weight:600;'>BẢNG TÍNH HOA HỒNG CÔNG TY TNHH DABA SAIGON</div>",
     unsafe_allow_html=True)
 st.markdown(
-    "<div style='text-align:center;font-size:14px;color:#555;'>Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
+    "<div style='text-align:center;font-size:14px;color:#555;'>Hotline 0978.521.879 Địa chỉ: Lầu 9, Pearl Plaza, 561A Điện Biên Phủ, P.25, Q. Bình Thạnh, TP.HCM</div>",
     unsafe_allow_html=True)
 st.markdown("<hr style='margin:10px 0 20px 0;border:1px solid #EEE;'>", unsafe_allow_html=True)
 
