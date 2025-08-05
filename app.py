@@ -244,6 +244,21 @@ st.markdown("### 4. Tải file kết quả định dạng màu vượt cấp & c
 
 output_file = f'sales_report_dep_{uuid.uuid4().hex[:6]}.xlsx'
 df_export = df.sort_values(by=['parent_id', 'Mã khách hàng'], ascending=[True, True], na_position='last')
+
+# Loại bỏ các cột không mong muốn
+cols_to_drop = [
+    "vuot_cap_trailblazer", "Loại khách", "Chi nhánh tạo", "Khu vực giao hàng", "Phường/Xã", "Số CMND/CCCD",
+    "Ngày sinh", "Giới tính", "Email", "Facebook", "parent_id", "Người tạo", "Ngày tạo", "Tổng bán", "Trạng thái"
+]
+df_export = df_export.drop(columns=[col for col in cols_to_drop if col in df_export.columns])
+
+# Đổi tên các cột yêu cầu
+df_export = df_export.rename(columns={
+    "comm_rate": "Chiet_khau",
+    "override_rate": "TL_Hoa_Hong",
+    "override_comm": "Hoa_hong_he_thong"
+})
+
 df_export.to_excel(output_file, index=False)
 
 # ========== TÔ MÀU: vượt cấp + cha–con ==========
@@ -251,7 +266,7 @@ wb = load_workbook(output_file)
 ws = wb.active
 col_names = [cell.value for cell in ws[1]]
 col_makh = col_names.index('Mã khách hàng')+1
-col_parent = col_names.index('parent_id')+1
+col_parent = col_names.index('parent_id')+1 if 'parent_id' in col_names else None
 col_vuotcap = col_names.index('vuot_cap_trailblazer')+1 if 'vuot_cap_trailblazer' in col_names else None
 
 def pastel_color(seed_val):
@@ -267,12 +282,12 @@ trailblazer_vuotcap = set(df['vuot_cap_trailblazer'].dropna().unique()).union(df
 trailblazer_to_color = {tb: PatternFill(start_color=pastel_color(tb+"vuotcap"), end_color=pastel_color(tb+"vuotcap"), fill_type='solid') for tb in trailblazer_vuotcap}
 
 # 2. Mapping màu cho cha–con (F1) các hệ thống KHÁC vượt cấp
-ma_cha_list = df_export[df_export['Mã khách hàng'].isin(df_export['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
+ma_cha_list = df_export[df_export['Mã khách hàng'].isin(df_export['parent_id'].dropna())]['Mã khách hàng'].unique().tolist() if col_parent else []
 ma_cha_to_color = {ma_cha: PatternFill(start_color=pastel_color(ma_cha), end_color=pastel_color(ma_cha), fill_type='solid') for ma_cha in ma_cha_list}
 
 for row in range(2, ws.max_row + 1):
     ma_kh = str(ws.cell(row=row, column=col_makh).value)
-    parent_id = ws.cell(row=row, column=col_parent).value
+    parent_id = ws.cell(row=row, column=col_parent).value if col_parent else None
     vuotcap_tb = ws.cell(row=row, column=col_vuotcap).value if col_vuotcap else None
     # 1. Nếu là hệ thống vượt cấp: Trailblazer hoặc Catalyst vượt cấp thì cùng màu vượt cấp
     if (vuotcap_tb and vuotcap_tb in trailblazer_to_color):
@@ -280,9 +295,9 @@ for row in range(2, ws.max_row + 1):
     elif ma_kh in trailblazer_to_color:
         fill = trailblazer_to_color[ma_kh]
     # 2. Còn lại: giữ màu cha–con (F1) như logic gốc
-    elif ma_kh in ma_cha_to_color:
+    elif col_parent and ma_kh in ma_cha_to_color:
         fill = ma_cha_to_color[ma_kh]
-    elif parent_id in ma_cha_to_color:
+    elif col_parent and parent_id in ma_cha_to_color:
         fill = ma_cha_to_color[parent_id]
     else:
         fill = PatternFill(fill_type=None)
