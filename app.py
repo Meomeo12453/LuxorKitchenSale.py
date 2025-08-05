@@ -244,21 +244,6 @@ st.markdown("### 4. Tải file kết quả định dạng màu vượt cấp & c
 
 output_file = f'sales_report_dep_{uuid.uuid4().hex[:6]}.xlsx'
 df_export = df.sort_values(by=['parent_id', 'Mã khách hàng'], ascending=[True, True], na_position='last')
-
-# Loại bỏ các cột không mong muốn
-cols_to_drop = [
-    "vuot_cap_trailblazer", "Loại khách", "Chi nhánh tạo", "Khu vực giao hàng", "Phường/Xã", "Số CMND/CCCD",
-    "Ngày sinh", "Giới tính", "Email", "Facebook", "parent_id", "Người tạo", "Ngày tạo", "Tổng bán", "Trạng thái"
-]
-df_export = df_export.drop(columns=[col for col in cols_to_drop if col in df_export.columns])
-
-# Đổi tên các cột yêu cầu
-df_export = df_export.rename(columns={
-    "comm_rate": "Chiet_khau",
-    "override_rate": "TL_Hoa_Hong",
-    "override_comm": "Hoa_hong_he_thong"
-})
-
 df_export.to_excel(output_file, index=False)
 
 # ========== TÔ MÀU: vượt cấp + cha–con ==========
@@ -312,6 +297,30 @@ for col in range(1, ws.max_column + 1):
     cell.fill = header_fill
     cell.font = header_font
     cell.alignment = header_align
+
+# ====== XÓA CÁC CỘT KHÔNG MUỐN XUẤT SAU KHI ĐÃ TÔ MÀU ======
+cols_to_drop = [
+    "vuot_cap_trailblazer", "Loại khách", "Chi nhánh tạo", "Khu vực giao hàng", "Phường/Xã", "Số CMND/CCCD",
+    "Ngày sinh", "Giới tính", "Email", "Facebook", "parent_id", "Người tạo", "Ngày tạo", "Tổng bán", "Trạng thái"
+]
+# Lấy lại tên cột theo thứ tự mới nhất
+ws_header = [cell.value for cell in ws[1]]
+for col_name in cols_to_drop:
+    if col_name in ws_header:
+        col_idx = ws_header.index(col_name) + 1
+        ws.delete_cols(col_idx)
+        ws_header.pop(col_idx - 1)  # Cập nhật lại sau khi xóa
+
+# ====== ĐỔI TÊN CỘT (nếu cần trên file Excel, còn trên DataFrame đã rename rồi) ======
+header_map = {
+    "comm_rate": "Chiet_khau",
+    "override_rate": "TL_Hoa_Hong",
+    "override_comm": "Hoa_hong_he_thong"
+}
+for col in range(1, ws.max_column + 1):
+    cell = ws.cell(row=1, column=col)
+    if cell.value in header_map:
+        cell.value = header_map[cell.value]
 
 bio = BytesIO()
 wb.save(bio)
