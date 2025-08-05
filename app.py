@@ -12,6 +12,7 @@ from openpyxl.styles import PatternFill, Alignment, Font
 import random
 import base64
 import uuid
+from matplotlib.backends.backend_pdf import PdfPages
 
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 for _ in range(4):
@@ -189,58 +190,61 @@ if filter_nganh:
 st.markdown("### 2. Bảng dữ liệu đại lý đã xử lý")
 st.dataframe(df, use_container_width=True, hide_index=True)
 
-st.markdown("### 3. Biểu đồ phân tích dữ liệu")
-if chart_type == "Biểu đồ cột chồng":
-    fig, ax = plt.subplots(figsize=(12,5))
-    ind = np.arange(len(df))
-    ax.bar(ind, df['Tổng bán trừ trả hàng'], width=0.5, label='Tổng bán cá nhân')
-    ax.bar(ind, df['override_comm'], width=0.5, bottom=df['Tổng bán trừ trả hàng'], label='Hoa hồng hệ thống')
-    ax.set_ylabel('Số tiền (VND)')
-    ax.set_title('Tổng bán & Hoa hồng hệ thống từng cá nhân')
-    ax.set_xticks(ind)
-    ax.set_xticklabels(df['Tên khách hàng'], rotation=60, ha='right')
-    ax.legend()
-    st.pyplot(fig)
-elif chart_type == "Sơ đồ Sunburst":
-    try:
-        fig2 = px.sunburst(
-            df,
-            path=['Nhóm khách hàng', 'Tên khách hàng'],
-            values='Tổng bán trừ trả hàng',
-            title="Sơ đồ hệ thống cấp bậc & doanh số"
-        )
-        st.plotly_chart(fig2, use_container_width=True)
-    except Exception as e:
-        st.error(f"Lỗi khi vẽ Sunburst chart: {e}")
-elif chart_type == "Biểu đồ Pareto":
-    try:
-        df_sorted = df.sort_values('Tổng bán trừ trả hàng', ascending=False)
-        cum_sum = df_sorted['Tổng bán trừ trả hàng'].cumsum()
-        cum_perc = 100 * cum_sum / df_sorted['Tổng bán trừ trả hàng'].sum()
-        fig3, ax1 = plt.subplots(figsize=(10,5))
-        ax1.bar(np.arange(len(df_sorted)), df_sorted['Tổng bán trừ trả hàng'], label="Doanh số")
-        ax1.set_ylabel('Doanh số')
-        ax1.set_xticks(range(len(df_sorted)))
-        ax1.set_xticklabels(df_sorted['Tên khách hàng'], rotation=60, ha='right')
-        ax2 = ax1.twinx()
-        ax2.plot(np.arange(len(df_sorted)), cum_perc, color='red', marker='o', label='Tích lũy (%)')
-        ax2.set_ylabel('Tỷ lệ tích lũy (%)')
-        ax1.set_title('Biểu đồ Pareto: Doanh số & tỷ trọng tích lũy')
-        fig3.tight_layout()
-        st.pyplot(fig3)
-    except Exception as e:
-        st.error(f"Lỗi khi vẽ Pareto chart: {e}")
-elif chart_type == "Biểu đồ tròn (Pie)":
-    try:
-        fig4, ax4 = plt.subplots(figsize=(6,6))
-        s = df.groupby('Nhóm khách hàng')['Tổng bán trừ trả hàng'].sum()
-        ax4.pie(s, labels=s.index, autopct='%1.1f%%')
-        ax4.set_title('Tỷ trọng doanh số theo nhóm khách hàng')
-        st.pyplot(fig4)
-    except Exception as e:
-        st.error(f"Lỗi khi vẽ Pie chart: {e}")
+# ====== Tạo các biểu đồ (matplotlib) và lưu thành các biến fig ======
+# (1) Biểu đồ cột chồng
+fig1, ax1 = plt.subplots(figsize=(12,5))
+ind = np.arange(len(df))
+ax1.bar(ind, df['Tổng bán trừ trả hàng'], width=0.5, label='Tổng bán cá nhân')
+ax1.bar(ind, df['override_comm'], width=0.5, bottom=df['Tổng bán trừ trả hàng'], label='Hoa hồng hệ thống')
+ax1.set_ylabel('Số tiền (VND)')
+ax1.set_title('Tổng bán & Hoa hồng hệ thống từng cá nhân')
+ax1.set_xticks(ind)
+ax1.set_xticklabels(df['Tên khách hàng'], rotation=60, ha='right')
+ax1.legend()
 
-st.markdown("### 4. Xuất file kết quả")
+# (2) Biểu đồ Pareto
+fig2, ax2 = plt.subplots(figsize=(10,5))
+df_sorted = df.sort_values('Tổng bán trừ trả hàng', ascending=False)
+cum_sum = df_sorted['Tổng bán trừ trả hàng'].cumsum()
+cum_perc = 100 * cum_sum / df_sorted['Tổng bán trừ trả hàng'].sum()
+ax2.bar(np.arange(len(df_sorted)), df_sorted['Tổng bán trừ trả hàng'], label="Doanh số")
+ax2.set_ylabel('Doanh số')
+ax2.set_xticks(range(len(df_sorted)))
+ax2.set_xticklabels(df_sorted['Tên khách hàng'], rotation=60, ha='right')
+ax2_2 = ax2.twinx()
+ax2_2.plot(np.arange(len(df_sorted)), cum_perc, color='red', marker='o', label='Tích lũy (%)')
+ax2_2.set_ylabel('Tỷ lệ tích lũy (%)')
+ax2.set_title('Biểu đồ Pareto: Doanh số & tỷ trọng tích lũy')
+fig2.tight_layout()
+
+# (3) Biểu đồ Pie
+fig3, ax3 = plt.subplots(figsize=(6,6))
+s = df.groupby('Nhóm khách hàng')['Tổng bán trừ trả hàng'].sum()
+ax3.pie(s, labels=s.index, autopct='%1.1f%%')
+ax3.set_title('Tỷ trọng doanh số theo nhóm khách hàng')
+
+# (Có thể thêm fig4,... tuỳ app)
+
+st.markdown("### 3. Biểu đồ phân tích dữ liệu")
+st.pyplot(fig1)
+st.pyplot(fig2)
+st.pyplot(fig3)
+
+# ======= GỘP TẤT CẢ BIỂU ĐỒ THÀNH 1 FILE PDF =======
+pdf_bytes = BytesIO()
+with PdfPages(pdf_bytes) as pdf:
+    for fig in [fig1, fig2, fig3]:
+        pdf.savefig(fig, bbox_inches='tight')
+pdf_bytes.seek(0)
+st.download_button(
+    "📥 Tải tất cả biểu đồ thành 1 file PDF",
+    data=pdf_bytes.getvalue(),
+    file_name="all_charts.pdf",
+    mime="application/pdf"
+)
+
+# ========== PHẦN XUẤT FILE EXCEL NHƯ CŨ ==========
+st.markdown("### 4. Tải file kết quả định dạng màu vượt cấp & cha–con")
 
 output_file = f'sales_report_dep_{uuid.uuid4().hex[:6]}.xlsx'
 df_export = df.sort_values(by=['parent_id', 'Mã khách hàng'], ascending=[True, True], na_position='last')
@@ -274,12 +278,10 @@ for row in range(2, ws.max_row + 1):
     ma_kh = str(ws.cell(row=row, column=col_makh).value)
     parent_id = ws.cell(row=row, column=col_parent).value if col_parent else None
     vuotcap_tb = ws.cell(row=row, column=col_vuotcap).value if col_vuotcap else None
-    # 1. Nếu là hệ thống vượt cấp: Trailblazer hoặc Catalyst vượt cấp thì cùng màu vượt cấp
     if (vuotcap_tb and vuotcap_tb in trailblazer_to_color):
         fill = trailblazer_to_color[vuotcap_tb]
     elif ma_kh in trailblazer_to_color:
         fill = trailblazer_to_color[ma_kh]
-    # 2. Còn lại: giữ màu cha–con (F1) như logic gốc
     elif col_parent and ma_kh in ma_cha_to_color:
         fill = ma_cha_to_color[ma_kh]
     elif col_parent and parent_id in ma_cha_to_color:
@@ -303,15 +305,14 @@ cols_to_drop = [
     "vuot_cap_trailblazer", "Loại khách", "Chi nhánh tạo", "Khu vực giao hàng", "Phường/Xã", "Số CMND/CCCD",
     "Ngày sinh", "Giới tính", "Email", "Facebook", "parent_id", "Người tạo", "Ngày tạo", "Tổng bán", "Trạng thái"
 ]
-# Lấy lại tên cột theo thứ tự mới nhất
 ws_header = [cell.value for cell in ws[1]]
 for col_name in cols_to_drop:
     if col_name in ws_header:
         col_idx = ws_header.index(col_name) + 1
         ws.delete_cols(col_idx)
-        ws_header.pop(col_idx - 1)  # Cập nhật lại sau khi xóa
+        ws_header.pop(col_idx - 1)
 
-# ====== ĐỔI TÊN CỘT (nếu cần trên file Excel, còn trên DataFrame đã rename rồi) ======
+# ====== ĐỔI TÊN CỘT (nếu cần trên file Excel) ======
 header_map = {
     "comm_rate": "Chiet_khau",
     "override_rate": "TL_Hoa_Hong",
@@ -332,4 +333,3 @@ downloaded = st.download_button(
 )
 if downloaded:
     st.toast("✅ Đã tải xuống!", icon="✅")
-
