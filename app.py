@@ -102,6 +102,18 @@ for f in uploaded_files[:10]:
     dft = pd.read_excel(f)
     dfs.append(dft)
 df = pd.concat(dfs, ignore_index=True)
+
+# ===== CẢNH BÁO TRÙNG MÃ KHÁCH HÀNG =====
+duplicated_mask = df.duplicated(subset=['Mã khách hàng'], keep=False)
+if duplicated_mask.any():
+    dup_kh = df.loc[duplicated_mask, 'Mã khách hàng']
+    dup_kh_list = dup_kh.value_counts().index.tolist()
+    dup_kh_str = ", ".join(str(x) for x in dup_kh_list)
+    st.warning(
+        f"⚠️ Có {len(dup_kh_list)} mã khách hàng bị trùng trong file dữ liệu: **{dup_kh_str}**. "
+        "Chỉ giữ lại dòng đầu tiên cho mỗi mã. Vui lòng kiểm tra lại file gốc!"
+    )
+
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str).str.strip()
 df['Ghi chú'] = df['Ghi chú'].astype(str).str.strip()
 df['Ghi chú'] = df['Ghi chú'].replace({'None': None, 'nan': None, 'NaN': None, '': None})
@@ -191,7 +203,6 @@ st.markdown("### 2. Bảng dữ liệu đại lý đã xử lý")
 st.dataframe(df, use_container_width=True, hide_index=True)
 
 # ====== Tạo các biểu đồ (matplotlib) và lưu thành các biến fig ======
-# (1) Biểu đồ cột chồng
 fig1, ax1 = plt.subplots(figsize=(12,5))
 ind = np.arange(len(df))
 ax1.bar(ind, df['Tổng bán trừ trả hàng'], width=0.5, label='Tổng bán cá nhân')
@@ -202,7 +213,6 @@ ax1.set_xticks(ind)
 ax1.set_xticklabels(df['Tên khách hàng'], rotation=60, ha='right')
 ax1.legend()
 
-# (2) Biểu đồ Pareto
 fig2, ax2 = plt.subplots(figsize=(10,5))
 df_sorted = df.sort_values('Tổng bán trừ trả hàng', ascending=False)
 cum_sum = df_sorted['Tổng bán trừ trả hàng'].cumsum()
@@ -217,20 +227,16 @@ ax2_2.set_ylabel('Tỷ lệ tích lũy (%)')
 ax2.set_title('Biểu đồ Pareto: Doanh số & tỷ trọng tích lũy')
 fig2.tight_layout()
 
-# (3) Biểu đồ Pie
 fig3, ax3 = plt.subplots(figsize=(6,6))
 s = df.groupby('Nhóm khách hàng')['Tổng bán trừ trả hàng'].sum()
 ax3.pie(s, labels=s.index, autopct='%1.1f%%')
 ax3.set_title('Tỷ trọng doanh số theo nhóm khách hàng')
-
-# (Có thể thêm fig4,... tuỳ app)
 
 st.markdown("### 3. Biểu đồ phân tích dữ liệu")
 st.pyplot(fig1)
 st.pyplot(fig2)
 st.pyplot(fig3)
 
-# ======= GỘP TẤT CẢ BIỂU ĐỒ THÀNH 1 FILE PDF =======
 pdf_bytes = BytesIO()
 with PdfPages(pdf_bytes) as pdf:
     for fig in [fig1, fig2, fig3]:
@@ -243,14 +249,12 @@ st.download_button(
     mime="application/pdf"
 )
 
-# ========== PHẦN XUẤT FILE EXCEL NHƯ CŨ ==========
-st.markdown("### 4. Tải file kết quả.")
+st.markdown("### 4. Tải file kết quả định dạng màu vượt cấp & cha–con")
 
 output_file = f'sales_report_dep_{uuid.uuid4().hex[:6]}.xlsx'
 df_export = df.sort_values(by=['parent_id', 'Mã khách hàng'], ascending=[True, True], na_position='last')
 df_export.to_excel(output_file, index=False)
 
-# ========== TÔ MÀU: vượt cấp + cha–con ==========
 wb = load_workbook(output_file)
 ws = wb.active
 col_names = [cell.value for cell in ws[1]]
@@ -266,11 +270,9 @@ def pastel_color(seed_val):
     r, g, b = colorsys.hsv_to_rgb(h, s, v)
     return "%02X%02X%02X" % (int(r*255), int(g*255), int(b*255))
 
-# 1. Mapping màu cho hệ thống vượt cấp (Trailblazer + Catalyst con trực thuộc)
 trailblazer_vuotcap = set(df['vuot_cap_trailblazer'].dropna().unique()).union(df[df['Nhóm khách hàng']=='Trailblazer']['Mã khách hàng'])
 trailblazer_to_color = {tb: PatternFill(start_color=pastel_color(tb+"vuotcap"), end_color=pastel_color(tb+"vuotcap"), fill_type='solid') for tb in trailblazer_vuotcap}
 
-# 2. Mapping màu cho cha–con (F1) các hệ thống KHÁC vượt cấp
 ma_cha_list = df_export[df_export['Mã khách hàng'].isin(df_export['parent_id'].dropna())]['Mã khách hàng'].unique().tolist() if col_parent else []
 ma_cha_to_color = {ma_cha: PatternFill(start_color=pastel_color(ma_cha), end_color=pastel_color(ma_cha), fill_type='solid') for ma_cha in ma_cha_list}
 
@@ -300,7 +302,6 @@ for col in range(1, ws.max_column + 1):
     cell.font = header_font
     cell.alignment = header_align
 
-# ====== XÓA CÁC CỘT KHÔNG MUỐN XUẤT SAU KHI ĐÃ TÔ MÀU ======
 cols_to_drop = [
     "vuot_cap_trailblazer", "Loại khách", "Chi nhánh tạo", "Khu vực giao hàng", "Phường/Xã", "Số CMND/CCCD",
     "Ngày sinh", "Giới tính", "Email", "Facebook", "parent_id", "Người tạo", "Ngày tạo", "Tổng bán", "Trạng thái"
@@ -312,7 +313,6 @@ for col_name in cols_to_drop:
         ws.delete_cols(col_idx)
         ws_header.pop(col_idx - 1)
 
-# ====== ĐỔI TÊN CỘT (nếu cần trên file Excel) ======
 header_map = {
     "comm_rate": "Chiet_khau",
     "override_rate": "TL_Hoa_Hong",
@@ -333,4 +333,3 @@ downloaded = st.download_button(
 )
 if downloaded:
     st.toast("✅ Đã tải xuống!", icon="✅")
-
