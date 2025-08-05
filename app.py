@@ -240,7 +240,7 @@ elif chart_type == "Biểu đồ tròn (Pie)":
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pie chart: {e}")
 
-st.markdown("### 4. Tải file kết quả định dạng màu vượt cấp & cha–con")
+st.markdown("### 4. Xuất file kết quả")
 
 output_file = f'sales_report_dep_{uuid.uuid4().hex[:6]}.xlsx'
 df_export = df.sort_values(by=['parent_id', 'Mã khách hàng'], ascending=[True, True], na_position='last')
@@ -332,3 +332,4 @@ downloaded = st.download_button(
 )
 if downloaded:
     st.toast("✅ Đã tải xuống!", icon="✅")
+
