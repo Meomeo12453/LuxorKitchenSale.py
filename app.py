@@ -166,6 +166,13 @@ df['Hoa hồng vượt cấp'] = df['Mã khách hàng'].astype(str).map(vuot_cap
 catalyst_sys_map = catalyst_children.set_index('Mã khách hàng')['parent_id'].to_dict()
 df['vuot_cap_trailblazer'] = df['Mã khách hàng'].map(catalyst_sys_map)
 
+# === ĐIỀU CHỈNH DOANH SỐ HỆ THỐNG CHO TRAILBLAZER ===
+tb_catalyst_vuotcap_doanhso = vuot_cap_ds.to_dict()
+for idx, row in df.iterrows():
+    if row['Nhóm khách hàng'] == 'Trailblazer':
+        minus = tb_catalyst_vuotcap_doanhso.get(row['Mã khách hàng'], 0)
+        df.at[idx, 'Doanh số hệ thống'] = max(row['Doanh số hệ thống'] - minus, 0)
+
 # Sắp xếp lại thứ tự cột nếu cần
 cols = list(df.columns)
 if 'Hoa hồng vượt cấp' in cols and 'Doanh số vượt cấp' in cols:
