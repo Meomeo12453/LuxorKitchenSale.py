@@ -212,7 +212,7 @@ for idx, row in df.iterrows():
 df['Số cấp dưới'] = desc_counts
 df['Doanh số hệ thống'] = ds_he_thong
 
-# Tính override_comm
+# Tính override_comm (hoa hồng hệ thống)
 network = {
     'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
     'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
@@ -221,6 +221,17 @@ network = {
 df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('comm_rate', 0))
 df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
 df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
+
+# -------- TÍNH HOA HỒNG VƯỢT CẤP CHO TRAILBLAZER --------
+# Mỗi đại lý Catalyst có parent_id, nếu parent_id đó là Trailblazer → Trailblazer nhận 10% doanh số của Catalyst con.
+trailblazer_codes = df[df['Nhóm khách hàng'] == 'Trailblazer']['Mã khách hàng'].astype(str)
+catalyst_children = df[(df['Nhóm khách hàng'] == 'Catalyst') & (df['parent_id'].notnull())]
+catalyst_children = catalyst_children[catalyst_children['parent_id'].isin(trailblazer_codes)]
+# Gộp doanh số các Catalyst con theo từng Trailblazer cha
+vuot_cap_series = catalyst_children.groupby('parent_id')['Tổng bán trừ trả hàng'].sum() * 0.10
+# Gán vào cột mới cho đúng đại lý Trailblazer, đại lý khác sẽ là 0
+df['Hoa hồng vượt cấp'] = df['Mã khách hàng'].astype(str).map(vuot_cap_series).fillna(0)
+# -------- KẾT THÚC HOA HỒNG VƯỢT CẤP --------
 
 if filter_nganh:
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
