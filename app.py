@@ -153,7 +153,6 @@ network = {
 }
 df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('comm_rate', 0))
 df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
-df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 
 # ==== TÍNH VƯỢT CẤP & GẮN VÀO DATAFRAME ====
 trailblazer_codes = df[df['Nhóm khách hàng'] == 'Trailblazer']['Mã khách hàng'].astype(str)
@@ -172,6 +171,9 @@ for idx, row in df.iterrows():
     if row['Nhóm khách hàng'] == 'Trailblazer':
         minus = tb_catalyst_vuotcap_doanhso.get(row['Mã khách hàng'], 0)
         df.at[idx, 'Doanh số hệ thống'] = max(row['Doanh số hệ thống'] - minus, 0)
+
+# ==== TÍNH override_comm SAU khi cập nhật Doanh số hệ thống! ====
+df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 
 # Sắp xếp lại thứ tự cột nếu cần
 cols = list(df.columns)
