@@ -16,7 +16,6 @@ import uuid
 # ========== LOGO & GIAO DIỆN =============
 st.set_page_config(page_title="Sales Dashboard MiniApp", layout="wide")
 
-# Đẩy layout xuống để logo không bị cắt
 for _ in range(4):
     st.write("")
 
@@ -107,11 +106,9 @@ for f in uploaded_files[:10]:
     dfs.append(dft)
 df = pd.concat(dfs, ignore_index=True)
 
-# Cảnh báo font tiếng Việt trong tên KH
 if any(df['Tên khách hàng'].astype(str).str.contains('[^\x00-\x7F]', na=False)):
     st.info("ℹ️ File có chứa ký tự đặc biệt hoặc tiếng Việt. Nếu bị lỗi font khi mở file Excel, hãy lưu lại bằng Excel phiên bản quốc tế hoặc UTF-8.")
 
-# Kiểm tra cột bắt buộc (chấp nhận gợi ý check cột không dấu)
 required_cols = ['Mã khách hàng','Nhóm khách hàng','Tổng bán trừ trả hàng','Ghi chú','Tên khách hàng']
 missing_cols = [col for col in required_cols if col not in df.columns]
 if missing_cols:
@@ -121,19 +118,16 @@ if missing_cols:
             st.error(f"Thiếu cột '{req}' trong file Excel. Hãy kiểm tra lại tiêu đề cột (có thể bị thiếu dấu hoặc sai chính tả)!")
     st.stop()
 
-# Cảnh báo nhiều mã KH trùng
 n_trung = len(df) - df['Mã khách hàng'].nunique()
 if n_trung > 0:
     st.warning(f"⚠️ Có {n_trung} dòng dữ liệu bị trùng mã khách hàng và đã bị loại bỏ. Vui lòng kiểm tra file gốc.")
 
-# Chuẩn hóa dữ liệu
 df['Mã khách hàng'] = df['Mã khách hàng'].astype(str).str.strip()
 df['Ghi chú'] = df['Ghi chú'].astype(str).str.strip()
 df['Ghi chú'] = df['Ghi chú'].replace({'None': None, 'nan': None, 'NaN': None, '': None})
 df['Tổng bán trừ trả hàng'] = pd.to_numeric(df['Tổng bán trừ trả hàng'], errors='coerce').fillna(0)
 df = df.drop_duplicates(subset=['Mã khách hàng'], keep='first')
 
-# Cảnh báo nếu doanh số toàn bộ = 0 hoặc thiếu dữ liệu
 if (df['Tổng bán trừ trả hàng'] == 0).all():
     st.warning("⚠️ Tất cả doanh số đều bằng 0. Kiểm tra lại dữ liệu đầu vào!")
 if df['Tổng bán trừ trả hàng'].isnull().any():
@@ -143,7 +137,6 @@ null_kh = df['Mã khách hàng'].isnull().sum()
 if null_kh > 0:
     st.warning(f"⚠️ Có {null_kh} dòng thiếu mã khách hàng! Đã loại bỏ khỏi kết quả.")
 
-# Cảnh báo ghi chú nhiều mã hoặc ký tự lạ
 if df['Ghi chú'].str.contains(',|;|/|\\| ').any():
     st.warning("⚠️ Một số dòng 'Ghi chú cấp bậc' chứa nhiều mã hoặc ký tự phân cách (dấu phẩy, chấm phẩy, khoảng trắng, ...). Ứng dụng chỉ lấy mã đầu tiên.")
 
@@ -156,12 +149,10 @@ def get_parent_id(x):
     return x if x in all_codes else None
 df['parent_id'] = df['Ghi chú'].apply(get_parent_id)
 
-# Cảnh báo nếu 'Ghi chú' tham chiếu mã KH không tồn tại
 invalid_parents = df[(df['Ghi chú'].notnull()) & (~df['Ghi chú'].isin(all_codes))]
 if len(invalid_parents) > 0:
     st.warning(f"⚠️ Có {len(invalid_parents)} dòng có 'Ghi chú phân cấp' không khớp mã khách hàng nào. Các dòng này sẽ không được tính phân cấp.")
 
-# Xây parent_map (cha: [con])
 parent_map = {}
 for idx, row in df.iterrows():
     pid = row['parent_id']
@@ -169,7 +160,6 @@ for idx, row in df.iterrows():
     if pd.notnull(pid) and pid is not None:
         parent_map.setdefault(pid, []).append(code)
 
-# Cảnh báo vòng lặp cha–con
 def detect_cycles(parent_map):
     cycles = []
     def visit(node, visited):
@@ -188,7 +178,6 @@ cycles = detect_cycles(parent_map)
 if cycles:
     st.warning(f"⚠️ Chú ý các cấp bậc quản lý đang có nhiều thuộc cấp")
 
-# Đệ quy lấy tất cả thuộc cấp với visited chống vòng lặp
 def get_all_descendants(code, parent_map, visited=None):
     if visited is None:
         visited = set()
@@ -212,7 +201,7 @@ for idx, row in df.iterrows():
 df['Số cấp dưới'] = desc_counts
 df['Doanh số hệ thống'] = ds_he_thong
 
-# Tính override_comm (hoa hồng hệ thống)
+# Tính comm và override_comm
 network = {
     'Catalyst':     {'comm_rate': 0.35, 'override_rate': 0.00},
     'Visionary':    {'comm_rate': 0.40, 'override_rate': 0.05},
@@ -222,21 +211,31 @@ df['comm_rate']     = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).
 df['override_rate'] = df['Nhóm khách hàng'].map(lambda r: network.get(r, {}).get('override_rate', 0))
 df['override_comm'] = df['Doanh số hệ thống'] * df['override_rate']
 
-# -------- TÍNH HOA HỒNG VƯỢT CẤP CHO TRAILBLAZER --------
-# Mỗi đại lý Catalyst có parent_id, nếu parent_id đó là Trailblazer → Trailblazer nhận 10% doanh số của Catalyst con.
+# === BỔ SUNG: HỆ THỐNG VƯỢT CẤP (Trailblazer và các Catalyst trực thuộc) ===
 trailblazer_codes = df[df['Nhóm khách hàng'] == 'Trailblazer']['Mã khách hàng'].astype(str)
 catalyst_children = df[(df['Nhóm khách hàng'] == 'Catalyst') & (df['parent_id'].notnull())]
 catalyst_children = catalyst_children[catalyst_children['parent_id'].isin(trailblazer_codes)]
-# Gộp doanh số các Catalyst con theo từng Trailblazer cha
-vuot_cap_series = catalyst_children.groupby('parent_id')['Tổng bán trừ trả hàng'].sum() * 0.10
-# Gán vào cột mới cho đúng đại lý Trailblazer, đại lý khác sẽ là 0
-df['Hoa hồng vượt cấp'] = df['Mã khách hàng'].astype(str).map(vuot_cap_series).fillna(0)
-# -------- KẾT THÚC HOA HỒNG VƯỢT CẤP --------
+vuot_cap_ds = catalyst_children.groupby('parent_id')['Tổng bán trừ trả hàng'].sum()
+vuot_cap_hh = vuot_cap_ds * 0.10
+
+# Gắn cột doanh số vượt cấp và hoa hồng vượt cấp vào đúng Trailblazer
+df['Doanh số vượt cấp'] = df['Mã khách hàng'].astype(str).map(vuot_cap_ds).fillna(0)
+df['Hoa hồng vượt cấp'] = df['Mã khách hàng'].astype(str).map(vuot_cap_hh).fillna(0)
+# Đánh dấu Catalyst thuộc hệ thống vượt cấp của ai (Trailblazer nào)
+catalyst_sys_map = catalyst_children.set_index('Mã khách hàng')['parent_id'].to_dict()
+df['vuot_cap_trailblazer'] = df['Mã khách hàng'].map(catalyst_sys_map)
+
+# ==== Thay đổi thứ tự cột xuất Excel: đặt "Doanh số vượt cấp" trước "Hoa hồng vượt cấp" ====
+cols = list(df.columns)
+if 'Hoa hồng vượt cấp' in cols and 'Doanh số vượt cấp' in cols:
+    cols.remove('Doanh số vượt cấp')
+    idx_hhvc = cols.index('Hoa hồng vượt cấp')
+    cols.insert(idx_hhvc, 'Doanh số vượt cấp')
+df = df[cols]
 
 if filter_nganh:
     df = df[df['Nhóm khách hàng'].isin(filter_nganh)]
 
-# Cảnh báo nhiều dòng hoặc nhóm (ảnh hưởng chart)
 if len(df) > 1000:
     st.warning("⚠️ Dữ liệu quá nhiều khách hàng. Một số biểu đồ có thể hiển thị chậm hoặc xấu. Nên lọc nhóm khách hàng để xem chi tiết hơn.")
 
@@ -294,21 +293,18 @@ elif chart_type == "Biểu đồ tròn (Pie)":
     except Exception as e:
         st.error(f"Lỗi khi vẽ Pie chart: {e}")
 
-st.markdown("### 4. Tải file kết quả định dạng màu nhóm F1")
+st.markdown("### 4. Tải file kết quả định dạng màu nhóm vượt cấp")
 
 output_file = f'sales_report_dep_{uuid.uuid4().hex[:6]}.xlsx'
 df_export = df.sort_values(by=['parent_id', 'Mã khách hàng'], ascending=[True, True], na_position='last')
 df_export.to_excel(output_file, index=False)
 
-# Tô màu pastel, chỉ cha (có cấp dưới trực tiếp) và F1 cùng màu
+# ======= TÔ MÀU HỆ THỐNG VƯỢT CẤP (Trailblazer + Catalyst trực thuộc) =======
 wb = load_workbook(output_file)
 ws = wb.active
-col_makh = [cell.value for cell in ws[1]].index('Mã khách hàng')+1
-col_parent = [cell.value for cell in ws[1]].index('parent_id')+1
-ma_cha_list = df_export[df_export['Mã khách hàng'].isin(df_export['parent_id'].dropna())]['Mã khách hàng'].unique().tolist()
-
-if len(ma_cha_list) > 50:
-    st.warning(f"⚠️ Có quá nhiều nhóm đại lý cha (>{len(ma_cha_list)})! Màu sắc trong file Excel có thể trùng lặp và khó phân biệt.")
+col_names = [cell.value for cell in ws[1]]
+col_makh = col_names.index('Mã khách hàng')+1
+col_vuotcap = col_names.index('vuot_cap_trailblazer')+1 if 'vuot_cap_trailblazer' in col_names else None
 
 def pastel_color(seed_val):
     random.seed(str(seed_val))
@@ -317,18 +313,21 @@ def pastel_color(seed_val):
     v = 0.97
     r, g, b = colorsys.hsv_to_rgb(h, s, v)
     return "%02X%02X%02X" % (int(r*255), int(g*255), int(b*255))
-ma_cha_to_color = {ma_cha: PatternFill(start_color=pastel_color(ma_cha), end_color=pastel_color(ma_cha), fill_type='solid') for ma_cha in ma_cha_list}
+
+trailblazer_vuotcap = set(vuot_cap_ds.index)
+trailblazer_to_color = {tb: PatternFill(start_color=pastel_color(tb+"vuotcap"), end_color=pastel_color(tb+"vuotcap"), fill_type='solid') for tb in trailblazer_vuotcap}
+
 for row in range(2, ws.max_row + 1):
     ma_kh = str(ws.cell(row=row, column=col_makh).value)
-    parent_id = ws.cell(row=row, column=col_parent).value
-    if ma_kh in ma_cha_to_color:
-        fill = ma_cha_to_color[ma_kh]
-    elif parent_id in ma_cha_to_color:
-        fill = ma_cha_to_color[parent_id]
+    if ma_kh in trailblazer_to_color:
+        fill = trailblazer_to_color[ma_kh]
+    elif col_vuotcap and ws.cell(row=row, column=col_vuotcap).value in trailblazer_to_color:
+        fill = trailblazer_to_color[ws.cell(row=row, column=col_vuotcap).value]
     else:
         fill = PatternFill(fill_type=None)
     for col in range(1, ws.max_column + 1):
         ws.cell(row=row, column=col).fill = fill
+
 header_fill = PatternFill(start_color='FFE699', end_color='FFE699', fill_type='solid')
 header_font = Font(bold=True, color='000000')
 header_align = Alignment(horizontal='center', vertical='center')
